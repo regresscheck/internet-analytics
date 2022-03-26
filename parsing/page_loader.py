@@ -1,9 +1,11 @@
 from datetime import timedelta
+
+from matplotlib import backends
 from requests_cache import CachedSession
 
 session = CachedSession(
-    'basic_cache',
-    backend='filesystem',
+    '.http_cache',
+    backend='sqlite',
     use_cache_dir=True,
     expire_after=timedelta(days=1)
 )
