@@ -1,6 +1,7 @@
 from datetime import datetime
 from database_helpers import create_db
 from models.entity import Entity
+from parsing.activity_extraction import extract_entity_activities
 from parsing.entity_extraction import extract_entities
 from datetime import datetime, timedelta
 
@@ -12,8 +13,8 @@ def fetch_page_entities():
 
 
 def fetch_entity_activities(entity):
-    # TODO: do actual fetch
     print(entity)
+    extract_entity_activities(entity)
 
     #entity.last_updated = datetime.now()
     # entity.save()

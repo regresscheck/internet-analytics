@@ -1,7 +1,7 @@
 from parsing.entity_extractor_factory import extractor_factory
 from parsing.sites.tjournal import TJournalEntityExtractor
 
-TJournalEntityExtractor._register_extractor()
+extractor_factory.register_extractor(TJournalEntityExtractor)
 
 
 def extract_entities(url):

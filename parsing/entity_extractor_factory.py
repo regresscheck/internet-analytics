@@ -7,9 +7,10 @@ class EntityExtractorFactory:
     def __init__(self) -> None:
         self._extractors = {}
 
-    def register_extractor(self, domain, extractor):
+    def register_extractor(self, extractor):
+        assert issubclass(extractor, EntityExtractorBase)
+        domain = extractor.get_supported_domain()
         assert domain not in self._extractors
-        assert isinstance(extractor, EntityExtractorBase)
         self._extractors[domain] = extractor
 
     def get_extractor(self, url):

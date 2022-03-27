@@ -6,6 +6,9 @@ from parsing.entity_extractor_base import EntityExtractorBase
 from urllib.parse import urlparse
 
 
+SUPPORTED_DOMAIN = 'tjournal.ru'
+
+
 class TJournalEntityExtractor(EntityExtractorBase):
     def get_entities(self):
         page = self._get_page()
@@ -21,9 +24,15 @@ class TJournalEntityExtractor(EntityExtractorBase):
             entities.append(entity)
         return entities
 
+    @staticmethod
     def get_supported_domain():
-        return 'tjournal.ru'
+        return SUPPORTED_DOMAIN
 
 
 class TJournalActivityExtractor(ActivityExtractorBase):
-    pass
+    def get_activities(self):
+        return []
+
+    @staticmethod
+    def get_supported_domain():
+        return SUPPORTED_DOMAIN
