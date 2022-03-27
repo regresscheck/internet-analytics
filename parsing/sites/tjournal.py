@@ -1,6 +1,7 @@
 from datetime import datetime
 from bs4 import BeautifulSoup
 from models.entity import Entity, EntityType
+from parsing.activity_extractor_base import ActivityExtractorBase
 from parsing.entity_extractor_base import EntityExtractorBase
 from urllib.parse import urlparse
 
@@ -22,3 +23,7 @@ class TJournalEntityExtractor(EntityExtractorBase):
 
     def get_supported_domain():
         return 'tjournal.ru'
+
+
+class TJournalActivityExtractor(ActivityExtractorBase):
+    pass

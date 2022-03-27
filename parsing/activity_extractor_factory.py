@@ -1,15 +1,15 @@
 from urllib.parse import urlparse
 
-from parsing.entity_extractor_base import EntityExtractorBase
+from parsing.activity_extractor_base import ActivityExtractorBase
 
 
-class EntityExtractorFactory:
+class ActivityExtractorFactory:
     def __init__(self) -> None:
         self._extractors = {}
 
     def register_extractor(self, domain, extractor):
         assert domain not in self._extractors
-        assert isinstance(extractor, EntityExtractorBase)
+        assert isinstance(extractor, ActivityExtractorBase)
         self._extractors[domain] = extractor
 
     def get_extractor(self, url):
@@ -20,4 +20,4 @@ class EntityExtractorFactory:
         return extractor_class(url)
 
 
-extractor_factory = EntityExtractorFactory()
+extractor_factory = ActivityExtractorFactory()
