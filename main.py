@@ -13,8 +13,9 @@ def fetch_page_entities():
 
 
 def fetch_entity_activities(entity):
-    print(entity)
-    extract_entity_activities(entity)
+    print(entity.url)
+    activities = extract_entity_activities(entity)
+    print(activities)
 
     #entity.last_updated = datetime.now()
     # entity.save()

@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from matplotlib import backends
 from requests_cache import CachedSession
+import time
 
 session = CachedSession(
     '.http_cache',
@@ -16,8 +17,11 @@ class PageLoader():
         # TODO: implement connection pool/proxies
         pass
 
-    def get_url(self, url):
-        response = session.get(url)
+    def get_url(self, url, params={}):
+        response = session.get(url, params=params)
         # TODO: proper error/redirect handling
         assert response.status_code == 200
+        if not response.from_cache:
+            # TODO: implement proper delay for uncached requests
+            time.sleep(1)
         return response.text
