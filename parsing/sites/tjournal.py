@@ -59,7 +59,6 @@ class TJournalActivityExtractor(ActivityExtractorBase):
         return activities
 
     def get_activities(self):
-        # TODO: get time
         url = self.entity.url.rstrip('/')
         assert _url_pattern.match(url)
         comments_url = url + '/comments'
@@ -71,7 +70,7 @@ class TJournalActivityExtractor(ActivityExtractorBase):
         last_sorting_value = feed_tag['data-feed-last-sorting-value']
         last_id = feed_tag['data-feed-last-id']
         page_count = 2
-
+        # TODO: Do not overfetch comments. Stop when hitting last updated time from entity
         more_comments_url = url + '/more'
         while page_count <= 5:
             params = {
