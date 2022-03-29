@@ -21,6 +21,6 @@ class EntityTypeField(IntegerField):
 
 class Entity(BaseModel):
     entity_type = EntityTypeField()
-    url = TextField(unique=True)
+    url = TextField(unique=True, index=True)
     domain = TextField()
     last_updated = DateTimeField()

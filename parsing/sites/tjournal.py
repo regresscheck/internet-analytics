@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from bs4 import BeautifulSoup
+from consts import OLD_TIMES
 from models.activity import Activity
 from models.entity import Entity, EntityType
 from parsing.activity_extractor_base import ActivityExtractorBase
@@ -23,9 +24,9 @@ class TJournalEntityExtractor(EntityExtractorBase):
         entities = []
         for url in set(urls):
             domain = urlparse(url).netloc
-            entity, created = Entity.get_or_create(
+            entity, _ = Entity.get_or_create(
                 url=url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                   'last_updated': datetime(2000, 1, 1)})
+                                   'last_updated': OLD_TIMES})
             entities.append(entity)
         return entities
 
@@ -53,8 +54,8 @@ class TJournalActivityExtractor(ActivityExtractorBase):
                 'href']
             # TODO: set parent to post
             domain = urlparse(url).netloc
-            activity = Activity.get_or_create(url=url, defaults={'text': text, 'owner': self.entity,
-                                                                 'creation_time': creation_time, 'domain': domain})
+            activity, _ = Activity.get_or_create(url=url, defaults={'text': text, 'owner': self.entity,
+                                                                    'creation_time': creation_time, 'domain': domain})
             activities.append(activity)
         return activities
 
@@ -64,23 +65,28 @@ class TJournalActivityExtractor(ActivityExtractorBase):
         comments_url = url + '/comments'
         page = PageLoader().get_url(comments_url)
         soup = BeautifulSoup(page, features="lxml")
+
+        last_activity = self._get_last_activity()
+        last_creation_time = last_activity.creation_time if last_activity else OLD_TIMES
+
         activities = self.get_activities_from_page(soup)
+        if len(activities) == 0:
+            return []
 
         feed_tag = soup.find("div", {"class": "feed"})
         last_sorting_value = feed_tag['data-feed-last-sorting-value']
         last_id = feed_tag['data-feed-last-id']
         page_count = 2
-        # TODO: Do not overfetch comments. Stop when hitting last updated time from entity
-        more_comments_url = url + '/more'
-        while page_count <= 5:
-            params = {
-                '    last_id': last_id,
-                '    last_sorting_value': last_sorting_value,
-                '    page': page_count,
-                '    exclude_ids': '[]',
-                'mode': 'raw'
-            }
-            page = PageLoader().get_url(more_comments_url, params=params)
+        more_comments_url = comments_url + '/more'
+        while activities[-1].creation_time > last_creation_time:
+            # Manually construct URL to properly encode whitespace
+            full_url = more_comments_url + \
+                f'?%20%20%20%20last_id={last_id}&'\
+                + f'%20%20%20%20last_sorting_value={last_sorting_value}&'\
+                + f'%20%20%20%20page={page_count}&'\
+                + f'%20%20%20%20exclude_ids=[]&'\
+                + f'mode=raw'
+            page = PageLoader().get_url(full_url)
             try:
                 data = json.loads(page)
             except json.decoder.JSONDecodeError:
@@ -90,7 +96,7 @@ class TJournalActivityExtractor(ActivityExtractorBase):
             assert data['rc'] == 200
             if data['data']['items_html'] == None:
                 break
-            soup = BeautifulSoup(page, features="lxml")
+            soup = BeautifulSoup(data['data']['items_html'], features="lxml")
             activities.extend(self.get_activities_from_page(soup))
 
             last_sorting_value = data['data']['last_sorting_value']
