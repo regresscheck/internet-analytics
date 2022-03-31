@@ -19,7 +19,6 @@ def fetch_page_entities():
 def fetch_entity_activities(entity):
     print(entity.url)
     activities = extract_entity_activities(entity)
-    print(activities)
 
     entity.last_updated = datetime.now()
     if len(activities) > 0:
@@ -36,13 +35,17 @@ def fetch_activities():
 
 
 def analyze_entity(entity):
-    analysis, _ = Analysis.get_or_create(
-        owner=entity, defaults={'is_bot': False})
+    analysis, _ = Analysis.get_or_create(owner=entity)
 
     activities = list(Activity.select().where(Activity.owner == entity))
 
-    # TODO: do proper analysis
-    analysis.is_bot = len(activities) == 1337
+    recent_activities_window_days = 30
+    recent_activities_date = datetime.now(
+    ) - timedelta(days=recent_activities_window_days)
+    recent_activities = filter(
+        lambda activity: activity.creation_time > recent_activities_date, activities)
+    analysis.activity_score = len(activities) / recent_activities_window_days
+
     analysis.save()
 
     entity.is_analyzed = True
