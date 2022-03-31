@@ -8,7 +8,7 @@ session = CachedSession(
     '.http_cache',
     backend='sqlite',
     use_cache_dir=True,
-    expire_after=timedelta(days=1)
+    expire_after=timedelta(days=7)
 )
 
 

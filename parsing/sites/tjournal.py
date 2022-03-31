@@ -54,9 +54,10 @@ class TJournalActivityExtractor(ActivityExtractorBase):
                 'href']
             # TODO: set parent to post
             domain = urlparse(url).netloc
-            activity, _ = Activity.get_or_create(url=url, defaults={'text': text, 'owner': self.entity,
-                                                                    'creation_time': creation_time, 'domain': domain})
-            activities.append(activity)
+            activity, created = Activity.get_or_create(url=url, defaults={'text': text, 'owner': self.entity,
+                                                                          'creation_time': creation_time, 'domain': domain})
+            if created:
+                activities.append(activity)
         return activities
 
     def get_activities(self):

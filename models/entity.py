@@ -1,5 +1,5 @@
 import datetime
-from peewee import IntegerField, TextField, DateTimeField
+from peewee import IntegerField, TextField, DateTimeField, BooleanField
 from enum import IntEnum
 
 from models.base import BaseModel
@@ -24,3 +24,4 @@ class Entity(BaseModel):
     url = TextField(unique=True, index=True)
     domain = TextField()
     last_updated = DateTimeField()
+    is_analyzed = BooleanField(default=False, index=True)
