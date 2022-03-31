@@ -2,6 +2,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from consts import OLD_TIMES
 from database_helpers import create_db
+from models.activity import Activity
 from models.analysis import Analysis
 from models.entity import Entity, EntityType
 from parsing.activity_extraction import extract_entity_activities
@@ -38,8 +39,10 @@ def analyze_entity(entity):
     analysis, _ = Analysis.get_or_create(
         owner=entity, defaults={'is_bot': False})
 
+    activities = list(Activity.select().where(Activity.owner == entity))
+
     # TODO: do proper analysis
-    analysis.is_bot = False
+    analysis.is_bot = len(activities) == 1337
     analysis.save()
 
     entity.is_analyzed = True
