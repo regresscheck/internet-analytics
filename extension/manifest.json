@@ -1,0 +1,21 @@
+{
+    "name": "Getting Started Example",
+    "description": "Build an Extension!",
+    "version": "0.1",
+    "manifest_version": 3,
+    "action": {},
+    "permissions": [
+        "activeTab"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*/*"
+            ],
+            "js": [
+                "content-script.js"
+            ],
+            "run_at": "document_end"
+        }
+    ]
+}
