@@ -1,12 +1,13 @@
-from enum import unique
-from models.base import BaseModel
-from peewee import BigAutoField, ForeignKeyField, BooleanField, DoubleField
-
-from models.entity import Entity
+from sqlalchemy import Column, Integer, Float, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from worker.models.base import Base
 
 
-class Analysis(BaseModel):
-    id = BigAutoField(primary_key=True)
-    owner = ForeignKeyField(Entity, backref='activites', unique=True)
-    is_bot = BooleanField(default=False)
-    activity_score = DoubleField(default=0.0)
+class Analysis(Base):
+    __tablename__ = 'analysis'
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey('entity.id'), nullable=False)
+    owner = relationship("Entity", back_populates="analysis")
+    is_bot = Column(Boolean, default=False)
+    activity_score = Column(Float, default=0.0)

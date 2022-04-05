@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from parsing.entity_extractor_base import EntityExtractorBase
+from worker.parsing.entity_extractor_base import EntityExtractorBase
 
 
 class EntityExtractorFactory:

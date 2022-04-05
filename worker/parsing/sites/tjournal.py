@@ -1,13 +1,14 @@
 from datetime import datetime
 import json
 from bs4 import BeautifulSoup
-from consts import OLD_TIMES
-from models.activity import Activity
-from models.entity import Entity, EntityType
-from parsing.activity_extractor_base import ActivityExtractorBase
-from parsing.entity_extractor_base import EntityExtractorBase
+from worker.consts import OLD_TIMES
+from worker.database_helpers import get_or_create, session
+from worker.models.activity import Activity
+from worker.models.entity import Entity, EntityType
+from worker.parsing.activity_extractor_base import ActivityExtractorBase
+from worker.parsing.entity_extractor_base import EntityExtractorBase
 from urllib.parse import urlparse
-from parsing.page_loader import PageLoader
+from worker.parsing.page_loader import PageLoader
 import re
 
 SUPPORTED_DOMAIN = 'tjournal.ru'
@@ -24,9 +25,9 @@ class TJournalEntityExtractor(EntityExtractorBase):
         entities = []
         for url in set(urls):
             domain = urlparse(url).netloc
-            entity, _ = Entity.get_or_create(
-                url=url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                   'last_updated': OLD_TIMES})
+            entity, _ = get_or_create(session, Entity,
+                                      url=url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                         'last_updated': OLD_TIMES})
             entities.append(entity)
         return entities
 
@@ -54,8 +55,8 @@ class TJournalActivityExtractor(ActivityExtractorBase):
                 'href']
             # TODO: set parent to post
             domain = urlparse(url).netloc
-            activity, created = Activity.get_or_create(url=url, defaults={'text': text, 'owner': self.entity,
-                                                                          'creation_time': creation_time, 'domain': domain})
+            activity, created = get_or_create(session, Activity, url=url, defaults={'text': text, 'owner': self.entity,
+                                                                                    'creation_time': creation_time, 'domain': domain})
             if created:
                 activities.append(activity)
         return activities

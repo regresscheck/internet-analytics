@@ -1,6 +1,4 @@
 from datetime import timedelta
-
-from matplotlib import backends
 from requests_cache import CachedSession
 import time
 

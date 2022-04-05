@@ -1,5 +1,5 @@
-from parsing.entity_extractor_factory import extractor_factory
-from parsing.sites.tjournal import TJournalEntityExtractor
+from worker.parsing.entity_extractor_factory import extractor_factory
+from worker.parsing.sites.tjournal import TJournalEntityExtractor
 
 extractor_factory.register_extractor(TJournalEntityExtractor)
 

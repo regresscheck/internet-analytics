@@ -1,7 +1,2 @@
-from peewee import Model
-from database import db
-
-
-class BaseModel(Model):
-    class Meta:
-        database = db
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()

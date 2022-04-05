@@ -1,6 +1,6 @@
 import abc
-
-from models.activity import Activity
+from worker.database_helpers import session
+from worker.models.activity import Activity
 
 
 class ActivityExtractorBase(abc.ABC):
@@ -18,5 +18,5 @@ class ActivityExtractorBase(abc.ABC):
         pass
 
     def _get_last_activity(self):
-        return Activity.select().where(Activity.owner == self.entity).order_by(
-            Activity.creation_time.desc()).get_or_none()
+        return session.query(Activity).filter(Activity.owner == self.entity).order_by(
+            Activity.creation_time.desc()).first()

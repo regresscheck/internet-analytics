@@ -1,5 +1,5 @@
-from parsing.activity_extractor_factory import extractor_factory
-from parsing.sites.tjournal import TJournalActivityExtractor
+from worker.parsing.activity_extractor_factory import extractor_factory
+from worker.parsing.sites.tjournal import TJournalActivityExtractor
 
 
 extractor_factory.register_extractor(TJournalActivityExtractor)

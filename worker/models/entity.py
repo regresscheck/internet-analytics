@@ -1,27 +1,21 @@
-import datetime
-from peewee import IntegerField, TextField, DateTimeField, BooleanField
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
+from sqlalchemy.orm import relationship
 from enum import IntEnum
-
-from models.base import BaseModel
+from worker.models.base import Base
 
 
 class EntityType(IntEnum):
     USER = 1
 
 
-class EntityTypeField(IntegerField):
-    def db_value(self, enum_value):
-        if not isinstance(enum_value, EntityType):
-            raise TypeError('Invalid type, expected EntityType')
-        return super().db_value(enum_value.value)
+class Entity(Base):
+    __tablename__ = 'entity'
 
-    def python_value(self, value):
-        return EntityType(value)
-
-
-class Entity(BaseModel):
-    entity_type = EntityTypeField()
-    url = TextField(unique=True, index=True)
-    domain = TextField()
-    last_updated = DateTimeField()
-    is_analyzed = BooleanField(default=False, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(Enum(EntityType))
+    url = Column(String, nullable=False, unique=True, index=True)
+    domain = Column(String, nullable=False)
+    last_updated = Column(DateTime)
+    is_analyzed = Column(Boolean, default=False, index=True)
+    activities = relationship("Activity", back_populates="owner")
+    analysis = relationship("Analysis", back_populates="owner", uselist=False)

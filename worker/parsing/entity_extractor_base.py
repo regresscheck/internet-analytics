@@ -1,6 +1,6 @@
 import abc
 from urllib.parse import urlparse
-from parsing.page_loader import PageLoader
+from worker.parsing.page_loader import PageLoader
 
 
 class EntityExtractorBase(abc.ABC):

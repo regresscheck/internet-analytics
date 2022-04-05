@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from parsing.activity_extractor_base import ActivityExtractorBase
+from worker.parsing.activity_extractor_base import ActivityExtractorBase
 
 
 class ActivityExtractorFactory:
