@@ -1,5 +1,5 @@
-from worker.models.base import Base
-from worker.database import Session, engine
+from common.models.base import Base
+from common.database import Session, engine
 from sqlalchemy.sql import ClauseElement
 
 

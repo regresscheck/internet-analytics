@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
 from sqlalchemy.orm import relationship
 from enum import IntEnum
-from worker.models.base import Base
+from common.models.base import Base
 
 
 class EntityType(IntEnum):

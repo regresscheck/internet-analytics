@@ -1,6 +1,6 @@
 import abc
-from worker.database_helpers import session
-from worker.models.activity import Activity
+from common.database_helpers import session
+from common.models.activity import Activity
 
 
 class ActivityExtractorBase(abc.ABC):

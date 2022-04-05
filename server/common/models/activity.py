@@ -1,6 +1,6 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Index
 from sqlalchemy.orm import relationship, backref
-from worker.models.base import Base
+from common.models.base import Base
 
 
 class Activity(Base):

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from worker.models.base import Base
+from common.models.base import Base
 
 
 class Analysis(Base):

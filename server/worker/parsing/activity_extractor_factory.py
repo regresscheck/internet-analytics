@@ -1,5 +1,3 @@
-from urllib.parse import urlparse
-
 from worker.parsing.activity_extractor_base import ActivityExtractorBase
 
 

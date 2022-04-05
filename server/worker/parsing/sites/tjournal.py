@@ -1,10 +1,10 @@
 from datetime import datetime
 import json
 from bs4 import BeautifulSoup
-from worker.consts import OLD_TIMES
-from worker.database_helpers import get_or_create, session
-from worker.models.activity import Activity
-from worker.models.entity import Entity, EntityType
+from common.consts import OLD_TIMES
+from common.database_helpers import get_or_create, session
+from common.models.activity import Activity
+from common.models.entity import Entity, EntityType
 from worker.parsing.activity_extractor_base import ActivityExtractorBase
 from worker.parsing.entity_extractor_base import EntityExtractorBase
 from urllib.parse import urlparse
