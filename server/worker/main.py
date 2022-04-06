@@ -2,9 +2,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from common.consts import OLD_TIMES
 from common.database_helpers import create_db, get_or_create, session
-from common.models.activity import Activity
-from common.models.analysis import Analysis
-from common.models.entity import Entity, EntityType
+from common.models import Activity, Analysis, Entity, EntityType
 from worker.parsing.activity_extraction import extract_entity_activities
 from worker.parsing.entity_extraction import extract_entities
 from datetime import datetime, timedelta

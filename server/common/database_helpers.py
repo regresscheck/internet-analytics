@@ -1,5 +1,5 @@
 from common.models.base import Base
-from common.database import Session, engine
+from common.database import SessionLocal, engine
 from sqlalchemy.sql import ClauseElement
 
 
@@ -7,7 +7,7 @@ def create_db():
     Base.metadata.create_all(bind=engine)
 
 
-session = Session()
+session = SessionLocal()
 
 
 def get_or_create(session, model, defaults=None, **kwargs):
