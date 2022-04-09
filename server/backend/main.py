@@ -30,13 +30,19 @@ async def get_analytics(entity_url: str = "", db: Session = Depends(get_db)):
                 "found": "no",
                 "message": "No data found for valid Entity. Adding it for feature analysis"
             }
-        analysis = entity.analysis
-        return {
-            "id": analysis.id,
-            "owner_id": analysis.owner_id,
-            "is_bot": analysis.is_bot,
-            "activity_score": analysis.activity_score
-        }
+        if entity.is_analyzed:
+            analysis = entity.analysis
+            return {
+                "id": analysis.id,
+                "owner_id": analysis.owner_id,
+                "is_bot": analysis.is_bot,
+                "activity_score": analysis.activity_score
+            }
+        else:
+            return {
+                "found": "no",
+                "message": "No analysis found for given Entity"
+            }
     except Exception as e:
         # TODO: proper error handling
         return {

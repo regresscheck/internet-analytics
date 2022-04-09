@@ -2,6 +2,9 @@ from datetime import timedelta
 from requests_cache import CachedSession
 import time
 
+
+# TODO: more clever caching based on how old url is
+
 session = CachedSession(
     '.http_cache',
     backend='sqlite',
