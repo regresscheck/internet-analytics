@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from bs4 import BeautifulSoup
 from common.consts import OLD_TIMES
@@ -68,7 +68,9 @@ class TJournalActivityExtractor(ActivityExtractorBase):
         soup = BeautifulSoup(page, features="lxml")
 
         last_activity = self._get_last_activity()
-        last_creation_time = last_activity.creation_time if last_activity else OLD_TIMES
+        # TODO: do not limit time here
+        last_creation_time = last_activity.creation_time if last_activity else (
+            datetime.now() - timedelta(days=90))
 
         activities = self.get_activities_from_page(soup)
         if len(activities) == 0:
