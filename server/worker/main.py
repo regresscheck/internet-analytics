@@ -1,8 +1,10 @@
 from datetime import datetime
+import time
 from urllib.parse import urlparse
 from common.consts import OLD_TIMES
 from common.database_helpers import create_db, get_or_create, session
 from common.models import Activity, Analysis, Entity, EntityType
+from worker.parsing.crawler import Crawler
 from worker.parsing.activity_extraction import extract_entity_activities
 from worker.parsing.entity_extraction import extract_entities
 from datetime import datetime, timedelta
@@ -71,10 +73,18 @@ def require_analysis_for_test():
     session.commit()
 
 
+def crawl():
+    urls = ['https://tjournal.ru/']
+    crawler = Crawler()
+    crawler.crawl(urls)
+
+
 def main():
     create_db()
-    # fetch_page_entities()
-    create_test_entity()
-    fetch_activities()
-    require_analysis_for_test()
-    do_analysis()
+
+    # crawl()
+
+    while True:
+        fetch_activities()
+        do_analysis()
+        time.sleep(1)

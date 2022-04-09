@@ -18,8 +18,7 @@ pattern = re.compile("^([A-Z][0-9]+)+$")
 
 class TJournalEntityExtractor(EntityExtractorBase):
     def get_entities(self):
-        page = self._get_page()
-        soup = BeautifulSoup(page, features="lxml")
+        soup = self.get_soup()
         comment_authors = soup.find_all("a", {"class": "comment__author"})
         urls = [tag.get('href') for tag in comment_authors]
         entities = []

@@ -1,4 +1,5 @@
-const TJOURNAL_AUTHOR_TAG = 'content-header-author__name';
+const TJOURNAL_AUTHOR_DIV_CLASS = 'content-header-author__name';
+const TJOURNAL_AUTHOR_A_CLASS = 'comment__author';
 const TJOURNAL_USER_HREF_PREFIX = 'https://tjournal.ru/u/'
 
 var currentUITarget = null;
@@ -7,13 +8,14 @@ const analyticsDiv = document.createElement("div");
 analyticsDiv.setAttribute("id", "analytics-info")
 document.body.append(analyticsDiv);
 
+function isTJournalAuthorDIV(element) {
+    return element.tagName === 'DIV' && element.classList.contains(TJOURNAL_AUTHOR_DIV_CLASS)
+        && element.parentElement.href.startsWith(TJOURNAL_USER_HREF_PREFIX);;
+}
 
-function isTJournalUserElement(element) {
-    if (element.tagName !== 'DIV' || !element.classList.contains(TJOURNAL_AUTHOR_TAG)) {
-        return false;
-    }
-    const url = element.parentElement.href;
-    return url.startsWith(TJOURNAL_USER_HREF_PREFIX);
+function isTJournalAuthorA(element) {
+    return element.tagName === 'A' && element.classList.contains(TJOURNAL_AUTHOR_A_CLASS)
+        && element.href.startsWith(TJOURNAL_USER_HREF_PREFIX);
 }
 
 function clearUI() {
@@ -44,12 +46,14 @@ document.addEventListener('mousemove', function (e) {
     if (target === currentUITarget) {
         return;
     }
-    if (isTJournalUserElement(target)) {
-        // Parent element is a link to a user
-        const url = target.parentElement.href;
-        console.log(url);
+    if (isTJournalAuthorDIV(target)) {
+        url = target.parentElement.href;
         enableUI(target, url);
-    } else {
+    } else if (isTJournalAuthorA(target)) {
+        url = target.href;
+        enableUI(target, url);
+    }
+    else {
         clearUI();
     }
 }, false);

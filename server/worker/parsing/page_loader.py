@@ -18,8 +18,8 @@ class PageLoader():
     def get_url(self, url, params={}):
         response = session.get(url, params=params)
         # TODO: proper error/redirect handling
-        assert response.status_code == 200
+        assert response.status_code in [200, 404]
         if not response.from_cache:
-            # TODO: implement proper delay for uncached requests
-            time.sleep(1)
+            # TODO: implement proper delay for uncached requests. Have unique timer for each domain
+            time.sleep(2)
         return response.text
