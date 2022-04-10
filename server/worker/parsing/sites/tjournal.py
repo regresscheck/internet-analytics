@@ -1,113 +1,86 @@
-from datetime import datetime, timedelta
-import json
-from bs4 import BeautifulSoup
+from datetime import datetime
+from worker.parsing.site_parser import SiteParser
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 from common.consts import OLD_TIMES
 from common.database_helpers import get_or_create, session
 from common.models.activity import Activity
 from common.models.entity import Entity, EntityType
-from worker.parsing.activity_extractor_base import ActivityExtractorBase
-from worker.parsing.entity_extractor_base import EntityExtractorBase
 from urllib.parse import urlparse
-from worker.parsing.page_loader import PageLoader
 import re
 
 SUPPORTED_DOMAIN = 'tjournal.ru'
 
-pattern = re.compile("^([A-Z][0-9]+)+$")
+_url_pattern = re.compile('^https://tjournal.ru/u/[^/]*/.+$')
 
 
-class TJournalEntityExtractor(EntityExtractorBase):
-    def get_entities(self):
-        soup = self.get_soup()
-        comment_authors = soup.find_all("a", {"class": "comment__author"})
-        urls = [tag.get('href') for tag in comment_authors]
-        entities = []
-        for url in set(urls):
-            domain = urlparse(url).netloc
-            entity, _ = get_or_create(session, Entity,
-                                      url=url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                                         'last_updated': OLD_TIMES})
-            entities.append(entity)
-        return entities
-
+class TJournalParser(SiteParser):
     @staticmethod
     def get_supported_domain():
         return SUPPORTED_DOMAIN
 
+    def _is_post_url(self):
+        try:
+            self.driver.find_element(By.CLASS_NAME, 'page--entry')
+            return True
+        except NoSuchElementException:
+            return False
 
-_url_pattern = re.compile('^https://tjournal.ru/u/[^/]*$')
+    def _expand_comments(self):
+        element = self.driver.find_element(
+            By.XPATH, "//div[contains(@class, 'comments__content_wrapper__button')]/div")
+        if element.is_displayed():
+            ActionChains(self.driver).move_to_element(
+                element).click(element).perform()
 
+    def _get_entity_from_comment(self, comment):
+        try:
+            entity_url = comment.find_element(
+                By.XPATH, ".//a[contains(@class, 'comment__author')]").get_attribute('href')
+        except NoSuchElementException:
+            # Anonymous user
+            return None
+        domain = urlparse(entity_url).netloc
+        # TODO: insert all entities with a single commit
+        entity, _ = get_or_create(session, Entity,
+                                  url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                            'last_updated': OLD_TIMES})
+        return entity
 
-class TJournalActivityExtractor(ActivityExtractorBase):
-    def get_activities_from_page(self, soup):
-        comment_tags = urls = soup.find_all(
-            "div", {"class": "profile_comment_favorite"})
-        activities = []
-        for tag in comment_tags:
-            p_tag = tag.find("span", {
-                "class": "profile_comment_favorite__text__full"}).p
-            # Gifs don't have any "p" tag(and any text)
-            text = p_tag.text if p_tag else None
-            creation_time = datetime.fromtimestamp(
-                int(tag.find('time', {"class": "time"})['data-date']))
-            url = tag.find("a", {"class": "profile_comment_favorite__date"})[
-                'href']
-            # TODO: set parent to post
-            domain = urlparse(url).netloc
-            activity, created = get_or_create(session, Activity, url=url, defaults={'text': text, 'owner': self.entity,
-                                                                                    'creation_time': creation_time, 'domain': domain})
-            if created:
-                activities.append(activity)
-        return activities
+    def _get_activity_from_comment(self, comment, entity):
+        activity_url = comment.find_element(
+            By.XPATH, ".//a[contains(@class, 'comment__detail')]").get_attribute('href')
+        creation_time_str = comment.find_element(
+            By.XPATH, ".//a[contains(@class, 'comment__detail')]/time").get_attribute('data-date')
+        creation_time = datetime.fromtimestamp(int(creation_time_str))
+        text = comment.find_element(
+            By.XPATH, "./div[contains(@class, 'comment__text')]/p").get_attribute('innerText')
 
-    def get_activities(self):
-        url = self.entity.url.rstrip('/')
-        assert _url_pattern.match(url)
-        comments_url = url + '/comments'
-        page = PageLoader().get_url(comments_url)
-        soup = BeautifulSoup(page, features="lxml")
+        domain = urlparse(activity_url).netloc
+        # TODO: same, single commit
+        _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
+                                                                         'creation_time': creation_time, 'domain': domain})
 
-        last_activity = self._get_last_activity()
-        # TODO: do not limit time here
-        last_creation_time = last_activity.creation_time if last_activity else (
-            datetime.now() - timedelta(days=90))
+    def _get_post_author_entities(self):
+        authors = self.driver.find_elements(
+            By.CLASS_NAME, 'content-header-author--user')
+        for author in authors:
+            entity_url = author.get_attribute('href')
+            domain = urlparse(entity_url).netloc
+            _ = get_or_create(session, Entity,
+                              url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                        'last_updated': OLD_TIMES})
 
-        activities = self.get_activities_from_page(soup)
-        if len(activities) == 0:
-            return []
+    def parse(self):
+        self._get_post_author_entities()
+        if not self._is_post_url():
+            return
+        self._expand_comments()
 
-        feed_tag = soup.find("div", {"class": "feed"})
-        last_sorting_value = feed_tag['data-feed-last-sorting-value']
-        last_id = feed_tag['data-feed-last-id']
-        page_count = 2
-        more_comments_url = comments_url + '/more'
-        while activities[-1].creation_time > last_creation_time:
-            # Manually construct URL to properly encode whitespace
-            full_url = more_comments_url + \
-                f'?%20%20%20%20last_id={last_id}&'\
-                + f'%20%20%20%20last_sorting_value={last_sorting_value}&'\
-                + f'%20%20%20%20page={page_count}&'\
-                + f'%20%20%20%20exclude_ids=[]&'\
-                + f'mode=raw'
-            page = PageLoader().get_url(full_url)
-            try:
-                data = json.loads(page)
-            except json.decoder.JSONDecodeError:
-                # TODO: proper handling? verify possible cause
-                break
-            # TODO: proper error handling
-            assert data['rc'] == 200
-            if data['data']['items_html'] == None:
-                break
-            soup = BeautifulSoup(data['data']['items_html'], features="lxml")
-            activities.extend(self.get_activities_from_page(soup))
+        comments = self.driver.find_elements(By.CLASS_NAME, 'comment__content')
+        for comment in comments:
+            entity = self._get_entity_from_comment(comment)
 
-            last_sorting_value = data['data']['last_sorting_value']
-            last_id = data['data']['last_id']
-            page_count += 1
-
-        return activities
-
-    @ staticmethod
-    def get_supported_domain():
-        return SUPPORTED_DOMAIN
+            if entity is not None:
+                _ = self._get_activity_from_comment(comment, entity)

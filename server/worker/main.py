@@ -1,37 +1,8 @@
 from datetime import datetime
-import time
-from urllib.parse import urlparse
-from common.consts import OLD_TIMES
 from common.database_helpers import create_db, get_or_create, session
-from common.models import Activity, Analysis, Entity, EntityType
+from common.models import Activity, Analysis, Entity
 from worker.parsing.crawler import Crawler
-from worker.parsing.activity_extraction import extract_entity_activities
-from worker.parsing.entity_extraction import extract_entities
 from datetime import datetime, timedelta
-
-
-def fetch_page_entities():
-    request_url = 'https://tjournal.ru/flood/567408-mechty-o-budushchem'
-
-    entities = extract_entities(request_url)
-
-
-def fetch_entity_activities(entity):
-    print(entity.url)
-    activities = extract_entity_activities(entity)
-
-    entity.last_updated = datetime.now()
-    if len(activities) > 0:
-        entity.is_analyzed = False
-    session.commit()
-
-
-def fetch_activities():
-    update_threshold = datetime.now() - timedelta(days=1)
-    entities_to_update = session.query(Entity).filter(
-        Entity.last_updated < update_threshold)
-    for entity in entities_to_update:
-        fetch_entity_activities(entity)
 
 
 def analyze_entity(entity):
@@ -45,7 +16,8 @@ def analyze_entity(entity):
     ) - timedelta(days=recent_activities_window_days)
     recent_activities = filter(
         lambda activity: activity.creation_time > recent_activities_date, activities)
-    analysis.activity_score = len(activities) / recent_activities_window_days
+    analysis.activity_score = len(
+        recent_activities) / recent_activities_window_days
     entity.is_analyzed = True
     session.commit()
 
@@ -57,34 +29,14 @@ def do_analysis():
         analyze_entity(entity)
 
 
-def create_test_entity():
-    url = 'https://tjournal.ru/u/469012-puhlyy-belyash'
-    domain = urlparse(url).netloc
-    _ = get_or_create(session, Entity,
-                      url=url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                         'last_updated': OLD_TIMES})
-
-
-def require_analysis_for_test():
-    entities_to_analyze = session.query(
-        Entity).filter(Entity.is_analyzed == True)
-    for entity in entities_to_analyze:
-        entity.is_analyzed = False
-    session.commit()
-
-
 def crawl():
-    urls = ['https://tjournal.ru/']
+    #urls = ['https://tjournal.ru/']
+    urls = ['https://tjournal.ru/u/92058-oleg-ivahnov-protiv-voyny/587004']
     crawler = Crawler()
     crawler.crawl(urls)
 
 
 def main():
     create_db()
-
-    # crawl()
-
-    while True:
-        fetch_activities()
-        do_analysis()
-        time.sleep(1)
+    crawl()
+    do_analysis()

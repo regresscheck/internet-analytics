@@ -1,9 +1,8 @@
 from queue import Queue
 from urllib.parse import urlparse
-
-from worker.parsing.entity_extraction import get_extractor
-
-# TODO: make it async to save a lot of time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from worker.parsing.site_parser_utils import get_suitable_parser
 
 
 class Crawler:
@@ -11,21 +10,24 @@ class Crawler:
         self.queue = Queue()
         self.current = set()
         self.processed = set()
+        # TODO: driver.close() on exit
+        # TODO: use env variable
+        self.driver = webdriver.Chrome(
+            '/home/regresscheck/Downloads/chromedriver')
 
-    def _get_next_urls(self, current_url, soup):
+    def _get_next_urls(self):
         current_domain = '{uri.scheme}://{uri.netloc}/'.format(
-            uri=urlparse(current_url))
+            uri=urlparse(self.driver.current_url))
         links = set()
-        for link in soup.find_all("a"):
-            if link.has_attr('href'):
-                url = link['href']
-                parsed_url = urlparse(url)
-                url_domain = '{uri.scheme}://{uri.netloc}/'.format(
-                    uri=parsed_url)
-                if current_domain == url_domain:
-                    # Drop query parameters and fragment
-                    links.add(parsed_url._replace(
-                        fragment="", query="").geturl())
+        for element in self.driver.find_elements(By.TAG_NAME, 'a'):
+            url = element.get_attribute('href')
+            parsed_url = urlparse(url)
+            url_domain = '{uri.scheme}://{uri.netloc}/'.format(
+                uri=parsed_url)
+            if current_domain == url_domain:
+                # Drop query parameters and fragment
+                links.add(parsed_url._replace(
+                    fragment="", query="").geturl())
         return list(links)
 
     def _process_one(self):
@@ -35,11 +37,12 @@ class Crawler:
         self.current.add(url)
         print(f"Processing {url}")
 
-        extractor = get_extractor(url)
-        _ = extractor.get_entities()
+        self.driver.get(url)
 
-        soup = extractor.get_soup()
-        next_urls = self._get_next_urls(url, soup)
+        parser = get_suitable_parser(self.driver)
+        parser.parse()
+
+        next_urls = self._get_next_urls()
         for next_url in next_urls:
             if next_url not in self.current and next_url not in self.processed:
                 self.queue.put(next_url)
