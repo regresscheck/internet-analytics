@@ -1,8 +1,11 @@
 from queue import Queue
+import time
 from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from worker.parsing.site_parser_utils import get_suitable_parser
+
+# TODO: implement caching. Maybe through proxy?
 
 
 class Crawler:
@@ -55,3 +58,5 @@ class Crawler:
             self.queue.put(url)
         while self.queue.qsize() > 0:
             self._process_one()
+            # TODO: wait time based on last request to given domain
+            time.sleep(2)

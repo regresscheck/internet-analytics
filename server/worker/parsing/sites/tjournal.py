@@ -54,8 +54,12 @@ class TJournalParser(SiteParser):
         creation_time_str = comment.find_element(
             By.XPATH, ".//a[contains(@class, 'comment__detail')]/time").get_attribute('data-date')
         creation_time = datetime.fromtimestamp(int(creation_time_str))
-        text = comment.find_element(
-            By.XPATH, "./div[contains(@class, 'comment__text')]/p").get_attribute('innerText')
+        try:
+            text = comment.find_element(
+                By.XPATH, "./div[contains(@class, 'comment__text')]/p").get_attribute('innerText')
+        except NoSuchElementException:
+            # no text(e.g. just a pic)
+            text = ""
 
         domain = urlparse(activity_url).netloc
         # TODO: same, single commit

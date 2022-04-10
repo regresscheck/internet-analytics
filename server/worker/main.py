@@ -30,8 +30,7 @@ def do_analysis():
 
 
 def crawl():
-    #urls = ['https://tjournal.ru/']
-    urls = ['https://tjournal.ru/u/92058-oleg-ivahnov-protiv-voyny/587004']
+    urls = ['https://tjournal.ru/']
     crawler = Crawler()
     crawler.crawl(urls)
 
