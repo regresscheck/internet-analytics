@@ -1,8 +1,10 @@
 from datetime import datetime
 from worker.parsing.site_parser import SiteParser
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from common.consts import OLD_TIMES
 from common.database_helpers import get_or_create, session
 from common.models.activity import Activity
@@ -28,8 +30,13 @@ class TJournalParser(SiteParser):
             return False
 
     def _expand_comments(self):
-        element = self.driver.find_element(
-            By.XPATH, "//div[contains(@class, 'comments__content_wrapper__button')]/div")
+        # Sometimes it takes time to load comments
+        try:
+            element = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
+                (By.XPATH, "//div[contains(@class, 'comments__content_wrapper__button')]/div")))
+        except TimeoutException:
+            print("WARNING: No expand button was found")
+            return
         if element.is_displayed():
             ActionChains(self.driver).move_to_element(
                 element).click(element).perform()

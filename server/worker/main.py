@@ -31,6 +31,7 @@ def do_analysis():
 
 def crawl():
     urls = ['https://tjournal.ru/']
+    #urls = ['https://tjournal.ru/tweets/587022']
     crawler = Crawler()
     crawler.crawl(urls)
 
