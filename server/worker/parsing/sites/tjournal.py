@@ -14,8 +14,6 @@ import re
 
 SUPPORTED_DOMAIN = 'tjournal.ru'
 
-_url_pattern = re.compile('^https://tjournal.ru/u/[^/]*/.+$')
-
 
 class TJournalParser(SiteParser):
     @staticmethod
@@ -63,7 +61,7 @@ class TJournalParser(SiteParser):
         creation_time = datetime.fromtimestamp(int(creation_time_str))
         try:
             text = comment.find_element(
-                By.XPATH, "./div[contains(@class, 'comment__text')]/p").get_attribute('innerText')
+                By.XPATH, "./div[contains(@class, 'comment__text')]").get_attribute('innerHTML')
         except NoSuchElementException:
             # no text(e.g. just a pic)
             text = ""

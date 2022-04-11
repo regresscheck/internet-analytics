@@ -3,7 +3,8 @@ import time
 from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from worker.parsing.site_parser_utils import get_suitable_parser
+from selenium.common.exceptions import TimeoutException
+from worker.parsing.site_parser_utils import NoSuitableParserException, get_suitable_parser
 
 # TODO: implement caching. Maybe through proxy?
 
@@ -17,6 +18,8 @@ class Crawler:
         # TODO: use env variable
         self.driver = webdriver.Chrome(
             '/home/regresscheck/Downloads/chromedriver')
+        self.driver.implicitly_wait(2)
+        self.driver.set_page_load_timeout(30)
 
     def _get_next_urls(self):
         current_domain = '{uri.scheme}://{uri.netloc}/'.format(
@@ -25,13 +28,15 @@ class Crawler:
         for element in self.driver.find_elements(By.TAG_NAME, 'a'):
             url = element.get_attribute('href')
             parsed_url = urlparse(url)
-            url_domain = '{uri.scheme}://{uri.netloc}/'.format(
-                uri=parsed_url)
-            if current_domain == url_domain:
-                # Drop query parameters and fragment
-                links.add(parsed_url._replace(
-                    fragment="", query="").geturl())
+            if parsed_url.scheme in ['http', 'https'] and len(parsed_url.netloc) > 0:
+                next_url = parsed_url._replace(
+                    fragment="", query="").geturl()
+                links.add(next_url)
         return list(links)
+
+    def _mark_as_done(self, url):
+        self.processed.add(url)
+        self.current.remove(url)
 
     def _process_one(self):
         url = self.queue.get()
@@ -39,19 +44,26 @@ class Crawler:
             return
         self.current.add(url)
         print(f"Processing {url}")
-
-        self.driver.get(url)
-
-        parser = get_suitable_parser(self.driver)
+        try:
+            self.driver.get(url)
+        except TimeoutException as e:
+            # TODO: mark as "try later"?
+            print(e)
+            self._mark_as_done(url)
+            return
+        try:
+            parser = get_suitable_parser(self.driver)
+        except NoSuitableParserException as e:
+            print(e)
+            self._mark_as_done(url)
+            return
         parser.parse()
 
         next_urls = self._get_next_urls()
         for next_url in next_urls:
             if next_url not in self.current and next_url not in self.processed:
                 self.queue.put(next_url)
-
-        self.processed.add(url)
-        self.current.remove(url)
+        self._mark_as_done(url)
 
     def crawl(self, starting_urls):
         for url in starting_urls:
