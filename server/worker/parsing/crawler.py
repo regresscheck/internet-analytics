@@ -18,13 +18,14 @@ class Crawler:
         # TODO: driver.close() on exit
         # TODO: use env variable
         chrome_options = Options()
+        chrome_options.add_argument('enable-automation')
+        chrome_options.add_argument('start-maximized')
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument('--start-maximized')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument('disable-infobars')
+        chrome_options.add_argument("--dns-prefetch-disable")
         self.driver = webdriver.Chrome(
             '/home/regresscheck/Downloads/chromedriver', options=chrome_options)
         self.driver.implicitly_wait(2)
@@ -56,10 +57,9 @@ class Crawler:
         try:
             self.driver.get(url)
         except TimeoutException as e:
-            # TODO: mark as "try later"?
-            print(e)
-            self._mark_as_done(url)
-            return
+            # Retry once
+            self.driver.navigate().refresh()
+            self.driver.get(url)
         try:
             parser = get_suitable_parser(self.driver)
         except NoSuitableParserException as e:
