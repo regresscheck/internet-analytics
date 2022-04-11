@@ -13,7 +13,8 @@
                 "*://*/*"
             ],
             "js": [
-                "content-script.js"
+                "content-script.js",
+                "sites.js"
             ],
             "css": [
                 "styles.css"

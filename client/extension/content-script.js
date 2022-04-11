@@ -1,7 +1,3 @@
-const TJOURNAL_AUTHOR_DIV_CLASS = 'content-header-author__name';
-const TJOURNAL_AUTHOR_A_CLASS = 'comment__author';
-const TJOURNAL_USER_HREF_PREFIX = 'https://tjournal.ru/u/'
-
 var currentUITarget = null;
 
 const analyticsDiv = document.createElement("div");
@@ -46,14 +42,10 @@ document.addEventListener('mousemove', function (e) {
     if (target === currentUITarget) {
         return;
     }
-    if (isTJournalAuthorDIV(target)) {
-        url = target.parentElement.href;
+    const url = getEntityUrlIfExists(target);
+    if (url !== null) {
         enableUI(target, url);
-    } else if (isTJournalAuthorA(target)) {
-        url = target.href;
-        enableUI(target, url);
-    }
-    else {
+    } else {
         clearUI();
     }
 }, false);

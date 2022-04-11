@@ -14,8 +14,8 @@ def analyze_entity(entity):
     recent_activities_window_days = 30
     recent_activities_date = datetime.now(
     ) - timedelta(days=recent_activities_window_days)
-    recent_activities = filter(
-        lambda activity: activity.creation_time > recent_activities_date, activities)
+    recent_activities = list(filter(
+        lambda activity: activity.creation_time > recent_activities_date, activities))
     analysis.activity_score = len(
         recent_activities) / recent_activities_window_days
     entity.is_analyzed = True
@@ -38,5 +38,5 @@ def crawl():
 
 def main():
     create_db()
-    crawl()
+    # crawl()
     do_analysis()

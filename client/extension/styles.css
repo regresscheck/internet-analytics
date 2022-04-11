@@ -1,7 +1,7 @@
 #analytics-info {
     display: none;
     position: absolute;
-    z-index: 999;
+    z-index: 999999;
     padding: 10px;
     background-color: white;
     border: 1px solid black;
