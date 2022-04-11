@@ -16,6 +16,12 @@ class Crawler:
         self.current = set()
         self.processed = set()
         # TODO: driver.close() on exit
+        self.driver = None
+        self._create_driver()
+
+    def _create_driver(self):
+        if self.driver is not None:
+            self.driver.quit()
         # TODO: use env variable
         chrome_options = Options()
         chrome_options.add_argument('enable-automation')
@@ -58,7 +64,9 @@ class Crawler:
             self.driver.get(url)
         except TimeoutException as e:
             # Retry once
-            self.driver.navigate().refresh()
+            print(
+                "WARNING: Failed with timeout exception. Retrying with new browser instance")
+            self._create_driver()
             self.driver.get(url)
         try:
             parser = get_suitable_parser(self.driver)
