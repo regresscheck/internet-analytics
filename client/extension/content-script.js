@@ -2,7 +2,9 @@ var currentUITarget = null;
 
 const analyticsDiv = document.createElement("div");
 analyticsDiv.setAttribute("id", "analytics-info")
+analyticsDiv.innerHTML = '<table id="analytics-table"><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody id="analytics-table-body"></tbody></table>'
 document.body.append(analyticsDiv);
+const analyticsTableBody = document.getElementById('analytics-table-body');
 
 function isTJournalAuthorDIV(element) {
     return element.tagName === 'DIV' && element.classList.contains(TJOURNAL_AUTHOR_DIV_CLASS)
@@ -19,6 +21,23 @@ function clearUI() {
     currentUITarget = null;
 }
 
+function createRow(values) {
+    const tr = document.createElement('tr');
+    for (var i = 0; i < values.length; i++) {
+        const td = document.createElement('td');
+        td.innerText = values[i];
+        tr.append(td);
+    }
+    return tr;
+}
+
+function updateTable(data) {
+    analyticsTableBody.innerHTML = ''
+    for (const [key, value] of Object.entries(data)) {
+        analyticsTableBody.append(createRow([key, value]));
+    }
+}
+
 function enableUI(element, url) {
     clearUI();
     currentUITarget = element;
@@ -26,13 +45,13 @@ function enableUI(element, url) {
         "entity_url": url,
     }
     chrome.runtime.sendMessage(request, function (response) {
-        analyticsDiv.innerText = response;
         analyticsDiv.style.display = "block";
+        updateTable(JSON.parse(response));
 
         const elementPosition = element.getBoundingClientRect();
         const absoluteTop = window.pageYOffset + elementPosition.top;
         const absoluteLeft = window.pageXOffset + elementPosition.left;
-        analyticsDiv.style.top = (absoluteTop - 50) + "px";
+        analyticsDiv.style.top = (absoluteTop - analyticsDiv.offsetHeight - 15) + "px";
         analyticsDiv.style.left = absoluteLeft + "px";
     })
 }

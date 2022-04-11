@@ -2,8 +2,38 @@
     display: none;
     position: absolute;
     z-index: 999999;
-    padding: 10px;
     background-color: white;
     border: 1px solid black;
     box-shadow: 7px 7px 5px;
+}
+
+#analytics-table {
+    border-collapse: collapse;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+#analytics-table thead tr {
+    background-color: #cca700;
+    color: #ffffff;
+    text-align: left;
+}
+
+#analytics-table th,
+#analytics-table td {
+    padding: 12px 15px;
+}
+
+#analytics-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+#analytics-table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+#analytics-table tbody tr:last-of-type {
+    border-bottom: 2px solid #cca700;
 }
