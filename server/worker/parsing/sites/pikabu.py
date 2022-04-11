@@ -1,8 +1,7 @@
 from datetime import datetime
 from worker.parsing.site_parser import SiteParser
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, MoveTargetOutOfBoundsException
-from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 from common.consts import OLD_TIMES
 from common.database_helpers import get_or_create, session
 from common.models.activity import Activity
@@ -17,13 +16,6 @@ class PikabuParser(SiteParser):
     @staticmethod
     def get_supported_domain():
         return SUPPORTED_DOMAIN
-
-    def _close_popups(self):
-        elements = self.driver.find_elements(
-            By.XPATH, "//div[contains(@class, 'story__top-close')]")
-        for element in elements:
-            ActionChains(self.driver).move_to_element(
-                element).click(element).perform()
 
     def _is_post_url(self):
         if not self.driver.current_url.startswith('https://pikabu.ru/story/'):
@@ -43,50 +35,14 @@ class PikabuParser(SiteParser):
                                                         'last_updated': OLD_TIMES})
 
     def _expand_comments(self):
-        element = self.driver.find_element(
-            By.CLASS_NAME, 'comments__more-button')
-        if element.is_displayed():
-            ActionChains(self.driver).move_to_element(
-                element).click(element).perform()
-        self._close_popups()
-        # Load all top comments
-        total_failures = 0
-        while True:
-            try:
-                element = self.driver.find_element(
-                    By.CLASS_NAME, 'comment__more')
-                ActionChains(self.driver).move_to_element(
-                    element).click(element).perform()
-            except MoveTargetOutOfBoundsException:
-                total_failures += 1
-                print("WARNING: EXPAND CLICK FAILURE")
-                if total_failures >= 10:
-                    print("ERROR: CANNOT EXPAND ALL COMMENTS")
-                    break
-            except NoSuchElementException:
-                break
-
+        # First button has different class
+        self.driver.execute_script(
+            "const button = document.querySelector('.comments__more-button'); if (button !== null) { button.click(); }")
+        self.driver.execute_script(
+            "while (true) { const button = document.querySelector('.comment__more'); if (button === null) { break; } button.click(); }")
         # Expand each comment subtree, may take multiple iterations
-        expanded = True
-        total_failures = 0
-        while expanded:
-            expanded = False
-            buttons = self.driver.find_elements(By.CLASS_NAME, 'comment-toggle-children__label') + \
-                self.driver.find_elements(
-                    By.CLASS_NAME, 'comment-hidden-group__toggle')
-            try:
-                for button in buttons:
-                    if button.is_displayed():
-                        ActionChains(self.driver).move_to_element(
-                            button).click(button).perform()
-                        expanded = True
-            except MoveTargetOutOfBoundsException:
-                total_failures += 1
-                expanded = True
-                print("WARNING: EXPAND CLICK FAILURE")
-                if total_failures >= 10:
-                    print("ERROR: CANNOT EXPAND ALL COMMENTS")
-                    break
+        self.driver.execute_script(
+            "while (true) {const collapsed = document.querySelectorAll('.comment-toggle-children_collapse'); if (collapsed.length == 0) {break;} collapsed.forEach(element => element.click())}")
 
     def _get_entity_from_comment(self, comment):
         try:
@@ -94,6 +50,11 @@ class PikabuParser(SiteParser):
                 By.XPATH, ".//a[contains(@class, 'user')]").get_attribute('href')
         except NoSuchElementException as e:
             # User is banned/deleted
+            return None
+        except StaleElementReferenceException as e:
+            # TODO: investigate why
+            # Test link: https://pikabu.ru/story/surovaya_vzroslaya_zhizn_9004310
+            print("WARNING: STALE ELEMENT")
             return None
         domain = urlparse(entity_url).netloc
         # TODO: insert all entities with a single commit
@@ -124,27 +85,34 @@ class PikabuParser(SiteParser):
         except NoSuchElementException:
             # likely post-answer, not really comment. Can be parsed separately on a different crawler call.
             # TODO: maybe parse it here?
-            return
+            return None
 
         if len(text) == 0:
             print("WARNING: empty comment text")
-            return
+            return None
 
         domain = urlparse(activity_url).netloc
         # TODO: same, single commit
-        _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
-                                                                         'creation_time': creation_time, 'domain': domain})
+        activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
+                                                                                   'creation_time': creation_time, 'domain': domain})
+        return activity
 
     def parse(self):
-        self._close_popups()
         self._get_post_author_entities()
         if not self._is_post_url():
             return
         self._expand_comments()
 
         comments = self.driver.find_elements(By.CLASS_NAME, 'comment__body')
+        total_entities = 0
+        total_activities = 0
         for comment in comments:
             entity = self._get_entity_from_comment(comment)
 
             if entity is not None:
-                _ = self._get_activity_from_comment(comment, entity)
+                total_entities += 1
+                activity = self._get_activity_from_comment(comment, entity)
+                if activity is not None:
+                    total_activities += 1
+        print(
+            f"Done parsing. Total entities: {total_entities}. Total activities: {total_activities}")

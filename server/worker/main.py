@@ -30,13 +30,13 @@ def do_analysis():
 
 
 def crawl():
-    #urls = ['https://pikabu.ru/']
-    urls = ['https://pikabu.ru/story/otvet_na_post_kogda_proshyol_6_yetapov_sobesedovaniya_8993068']
+    urls = ['https://pikabu.ru/']
+    #urls = ['https://pikabu.ru/story/surovaya_vzroslaya_zhizn_9004310']
     crawler = Crawler()
     crawler.crawl(urls)
 
 
 def main():
     create_db()
-    # crawl()
-    do_analysis()
+    crawl()
+    # do_analysis()
