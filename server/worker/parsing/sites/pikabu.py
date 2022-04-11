@@ -1,6 +1,8 @@
 from datetime import datetime
 from worker.parsing.site_parser import SiteParser
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 from common.consts import OLD_TIMES
 from common.database_helpers import get_or_create, session
@@ -41,8 +43,11 @@ class PikabuParser(SiteParser):
         self.driver.execute_script(
             "while (true) { const button = document.querySelector('.comment__more'); if (button === null) { break; } button.click(); }")
         # Expand each comment subtree, may take multiple iterations
+        # TODO: verify it works on very deep trees
         self.driver.execute_script(
             "while (true) {const collapsed = document.querySelectorAll('.comment-toggle-children_collapse'); if (collapsed.length == 0) {break;} collapsed.forEach(element => element.click())}")
+        _ = WebDriverWait(self.driver, 15).until_not(
+            EC.presence_of_element_located((By.CLASS_NAME, 'comment__placeholder')))
 
     def _get_entity_from_comment(self, comment):
         try:

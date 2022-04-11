@@ -2,6 +2,7 @@ from queue import Queue
 import time
 from urllib.parse import urlparse
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from worker.parsing.site_parser_utils import NoSuitableParserException, get_suitable_parser
@@ -16,8 +17,16 @@ class Crawler:
         self.processed = set()
         # TODO: driver.close() on exit
         # TODO: use env variable
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument('--start-maximized')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument('disable-infobars')
         self.driver = webdriver.Chrome(
-            '/home/regresscheck/Downloads/chromedriver')
+            '/home/regresscheck/Downloads/chromedriver', options=chrome_options)
         self.driver.implicitly_wait(2)
         self.driver.set_page_load_timeout(30)
 
