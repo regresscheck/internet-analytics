@@ -3,3 +3,4 @@ __pycache__/
 Playground.ipynb
 sqlite.db
 sqlite.db-journal
+geckodriver.log
