@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from worker.parsing.site_parser import SiteParser
 from selenium.webdriver.common.by import By
@@ -9,6 +10,8 @@ from common.database_helpers import get_or_create, session
 from common.models.activity import Activity
 from common.models.entity import Entity, EntityType
 from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 
 SUPPORTED_DOMAIN = 'pikabu.ru'
@@ -35,6 +38,7 @@ class PikabuParser(SiteParser):
             _ = get_or_create(session, Entity,
                               url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
                                                         'last_updated': OLD_TIMES})
+            self.total_entities += 1
 
     def _expand_comments(self):
         # First button has different class
@@ -59,13 +63,15 @@ class PikabuParser(SiteParser):
         except StaleElementReferenceException as e:
             # TODO: investigate why
             # Test link: https://pikabu.ru/story/surovaya_vzroslaya_zhizn_9004310
-            print("WARNING: STALE ELEMENT")
+            logger.error(
+                f"Stale element found while parsing URL {self.driver.current_url}")
             return None
         domain = urlparse(entity_url).netloc
         # TODO: insert all entities with a single commit
         entity, _ = get_or_create(session, Entity,
                                   url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
                                                             'last_updated': OLD_TIMES})
+        self.total_entities += 1
         return entity
 
     def _get_activity_from_comment(self, comment, entity):
@@ -93,13 +99,15 @@ class PikabuParser(SiteParser):
             return None
 
         if len(text) == 0:
-            print("WARNING: empty comment text")
+            logger.warning(
+                f"Empty comment text was parsed when processing URL {self.driver.current_url}")
             return None
 
         domain = urlparse(activity_url).netloc
         # TODO: same, single commit
         activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
                                                                                    'creation_time': creation_time, 'domain': domain})
+        self.total_activities += 1
         return activity
 
     def parse(self):
@@ -109,15 +117,8 @@ class PikabuParser(SiteParser):
         self._expand_comments()
 
         comments = self.driver.find_elements(By.CLASS_NAME, 'comment__body')
-        total_entities = 0
-        total_activities = 0
         for comment in comments:
             entity = self._get_entity_from_comment(comment)
 
             if entity is not None:
-                total_entities += 1
-                activity = self._get_activity_from_comment(comment, entity)
-                if activity is not None:
-                    total_activities += 1
-        print(
-            f"Done parsing. Total entities: {total_entities}. Total activities: {total_activities}")
+                _ = self._get_activity_from_comment(comment, entity)

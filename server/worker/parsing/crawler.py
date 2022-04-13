@@ -1,3 +1,4 @@
+import logging
 from queue import Queue
 import time
 from urllib.parse import urlparse
@@ -6,6 +7,9 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from worker.parsing.site_parser_utils import NoSuitableParserException, get_suitable_parser
+
+
+logger = logging.getLogger(__name__)
 
 # TODO: implement caching. Maybe through proxy?
 
@@ -45,20 +49,21 @@ class Crawler:
         if url in self.current or url in self.processed:
             return
         self.current.add(url)
-        print(f"Processing {url}")
+        logger.info(f"Processing {url}")
         try:
             self.driver.get(url)
         except TimeoutException as e:
-            print(e)
+            logger.warning(f'Timed out fetching URL {url}')
             self._mark_as_done(url)
             return
         try:
             parser = get_suitable_parser(self.driver)
         except NoSuitableParserException as e:
-            print(e)
+            logger.warning(f'No suitable parser found for URL {url}')
             self._mark_as_done(url)
             return
         parser.parse()
+        parser.log_results()
 
         next_urls = self._get_next_urls()
         for next_url in next_urls:

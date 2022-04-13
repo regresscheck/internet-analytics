@@ -47,6 +47,7 @@ class TJournalParser(SiteParser):
         entity, _ = get_or_create(session, Entity,
                                   url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
                                                             'last_updated': OLD_TIMES})
+        self.total_entities += 1
         return entity
 
     def _get_activity_from_comment(self, comment, entity):
@@ -66,6 +67,7 @@ class TJournalParser(SiteParser):
         # TODO: same, single commit
         _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
                                                                          'creation_time': creation_time, 'domain': domain})
+        self.total_activities += 1
 
     def _get_post_author_entities(self):
         authors = self.driver.find_elements(
@@ -76,6 +78,7 @@ class TJournalParser(SiteParser):
             _ = get_or_create(session, Entity,
                               url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
                                                         'last_updated': OLD_TIMES})
+            self.total_entities += 1
 
     def parse(self):
         self._get_post_author_entities()

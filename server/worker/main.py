@@ -1,8 +1,12 @@
-from datetime import datetime
-from common.database_helpers import create_db, get_or_create, session
-from common.models import Activity, Analysis, Entity
-from worker.parsing.crawler import Crawler
 from datetime import datetime, timedelta
+from worker.parsing.crawler import Crawler
+from common.models import Activity, Analysis, Entity
+from common.database_helpers import create_db, get_or_create, session
+from datetime import datetime
+from worker.logging_utils import setup_logging
+
+
+setup_logging()
 
 
 def analyze_entity(entity):
@@ -30,8 +34,7 @@ def do_analysis():
 
 
 def crawl():
-    urls = ['https://pikabu.ru/']
-    #urls = ['https://pikabu.ru/story/otvet_na_post_kogda_proshyol_6_yetapov_sobesedovaniya_8993068']
+    urls = ['https://pikabu.ru/best']
     crawler = Crawler()
     crawler.crawl(urls)
 
