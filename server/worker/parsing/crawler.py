@@ -1,10 +1,8 @@
 import logging
 from queue import Queue
 import time
-from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from worker.parsing.site_parser_utils import NoSuitableParserException, get_suitable_parser
 
@@ -26,19 +24,6 @@ class Crawler:
         self.driver = webdriver.Firefox(options=options)
         self.driver.implicitly_wait(2)
         self.driver.set_page_load_timeout(30)
-
-    def _get_next_urls(self):
-        current_domain = '{uri.scheme}://{uri.netloc}/'.format(
-            uri=urlparse(self.driver.current_url))
-        links = set()
-        for element in self.driver.find_elements(By.TAG_NAME, 'a'):
-            url = element.get_attribute('href')
-            parsed_url = urlparse(url)
-            if parsed_url.scheme in ['http', 'https'] and len(parsed_url.netloc) > 0:
-                next_url = parsed_url._replace(
-                    fragment="", query="").geturl()
-                links.add(next_url)
-        return list(links)
 
     def _mark_as_done(self, url):
         self.processed.add(url)
@@ -65,7 +50,7 @@ class Crawler:
         parser.parse()
         parser.log_results()
 
-        next_urls = self._get_next_urls()
+        next_urls = parser._get_next_urls()
         for next_url in next_urls:
             if next_url not in self.current and next_url not in self.processed:
                 self.queue.put(next_url)
