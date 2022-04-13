@@ -136,12 +136,15 @@ class PikabuParser(SiteParser):
                     By.CLASS_NAME, 'stories-feed__spinner')
             except NoSuchElementException:
                 return
-            last_post = self.driver.find_elements(By.TAG_NAME, 'article')[-1]
+            posts = self.driver.find_elements(By.TAG_NAME, 'article')
+            if len(posts) == 0:
+                return
+
             self.driver.execute_script(
                 'window.scrollTo(0, document.body.scrollHeight);')
             try:
                 WebDriverWait(self.driver, 10).until(
-                    last_element_changed((By.TAG_NAME, 'article'), last_post))
+                    last_element_changed((By.TAG_NAME, 'article'), posts[-1]))
             except TimeoutException:
                 return
 
