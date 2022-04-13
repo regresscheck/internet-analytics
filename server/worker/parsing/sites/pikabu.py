@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime
+from furl import furl
+from worker.parsing.selenium_utils import last_element_changed
 from worker.parsing.site_parser import SiteParser
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from common.consts import OLD_TIMES
 from common.database_helpers import get_or_create, session
 from common.models.activity import Activity
@@ -18,6 +20,8 @@ SUPPORTED_DOMAIN = 'pikabu.ru'
 
 
 class PikabuParser(SiteParser):
+    MAX_SCROLLS = 15
+
     @staticmethod
     def get_supported_domain():
         return SUPPORTED_DOMAIN
@@ -109,6 +113,41 @@ class PikabuParser(SiteParser):
                                                                                    'creation_time': creation_time, 'domain': domain})
         self.total_activities += 1
         return activity
+
+    def _strip_next_url(self, url):
+        f = furl(url).remove(fragment=True)
+        # Drop all the parameters except "page"
+        params_to_drop = set(f.query.params.keys())
+        params_to_drop.discard('page')
+        return f.remove(args=params_to_drop).url
+
+    def _scroll_for_more_posts(self):
+        try:
+            feed = self.driver.find_element(By.CLASS_NAME, 'stories-feed')
+        except NoSuchElementException:
+            return
+        is_paginated = feed.get_attribute(
+            'data-pagination-mode') == 'true'
+        if is_paginated:
+            return
+        for _ in range(self.MAX_SCROLLS):
+            try:
+                _ = self.driver.find_element(
+                    By.CLASS_NAME, 'stories-feed__spinner')
+            except NoSuchElementException:
+                return
+            last_post = self.driver.find_elements(By.TAG_NAME, 'article')[-1]
+            self.driver.execute_script(
+                'window.scrollTo(0, document.body.scrollHeight);')
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    last_element_changed((By.TAG_NAME, 'article'), last_post))
+            except TimeoutException:
+                return
+
+    def _get_next_urls(self):
+        self._scroll_for_more_posts()
+        return super()._get_next_urls()
 
     def parse(self):
         self._get_post_author_entities()

@@ -1,5 +1,5 @@
 import abc
-from urllib.parse import urlparse
+from furl import furl
 import logging
 from selenium.webdriver.common.by import By
 
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class SiteParser(abc.ABC):
     def __init__(self, driver):
-        domain = urlparse(driver.current_url).netloc
+        domain = furl(driver.current_url).netloc
         assert domain == self.get_supported_domain()
         self.driver = driver
 
@@ -24,15 +24,17 @@ class SiteParser(abc.ABC):
     def parse(self):
         pass
 
+    def _strip_next_url(self, url):
+        return furl(url).remove(args=True, fragment=True).url
+
     def _get_next_urls(self):
         links = set()
         for element in self.driver.find_elements(By.TAG_NAME, 'a'):
             url = element.get_attribute('href')
-            parsed_url = urlparse(url)
-            if parsed_url.scheme in ['http', 'https'] and len(parsed_url.netloc) > 0:
-                next_url = parsed_url._replace(
-                    fragment="", query="").geturl()
-                links.add(next_url)
+            f = furl(url)
+            if f.scheme not in ['http', 'https'] or len(f.netloc) == 0:
+                continue
+            links.add(self._strip_next_url(url))
         return list(links)
 
     def log_results(self):
