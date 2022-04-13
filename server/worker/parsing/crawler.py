@@ -59,7 +59,7 @@ class Crawler:
         try:
             parser = get_suitable_parser(self.driver)
         except NoSuitableParserException as e:
-            logger.warning(f'No suitable parser found for URL {url}')
+            logger.info(f'No suitable parser found for URL {url}')
             self._mark_as_done(url)
             return
         parser.parse()
