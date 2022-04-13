@@ -18,7 +18,6 @@ class Crawler:
         self.current = set()
         self.processed = set()
         # TODO: driver.close() on exit
-        # TODO: use env variable
         options = Options()
         options.headless = True
         self.driver = webdriver.Firefox(options=options)
