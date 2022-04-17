@@ -9,9 +9,8 @@ class Activity(Base):
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey('entity.id'), nullable=False)
     owner = relationship("Entity", back_populates="activities")
-    parent_id = Column(Integer, ForeignKey('activity.id'))
-    parent = relationship("Activity", backref=backref(
-        'children', remote_side=[id]))
+    parent_id = Column(Integer, ForeignKey(id))
+    parent = relationship("Activity", backref="children", remote_side=id)
     url = Column(String, nullable=False, unique=True, index=True)
     domain = Column(String, nullable=False)
     text = Column(String)

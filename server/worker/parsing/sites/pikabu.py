@@ -11,7 +11,7 @@ from common.consts import OLD_TIMES
 from common.database_helpers import get_or_create, session
 from common.models.activity import Activity
 from common.models.entity import Entity, EntityType
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +32,6 @@ class PikabuParser(SiteParser):
         # Ignore sponsor/ad posts
         elements = self.driver.find_elements(By.CLASS_NAME, 'story__sponsor')
         return len(elements) == 0
-
-    def _get_post_author_entities(self):
-        authors = self.driver.find_elements(
-            By.XPATH, "//a[contains(@class, 'story__user-link')]")
-        for author in authors:
-            entity_url = author.get_attribute('href')
-            domain = urlparse(entity_url).netloc
-            _ = get_or_create(session, Entity,
-                              url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                                        'last_updated': OLD_TIMES})
-            self.total_entities += 1
 
     def _expand_comments(self):
         # First button has different class
@@ -71,24 +60,26 @@ class PikabuParser(SiteParser):
                 f"Stale element found while parsing URL {self.driver.current_url}")
             return None
         domain = urlparse(entity_url).netloc
-        # TODO: insert all entities with a single commit
         entity, _ = get_or_create(session, Entity,
                                   url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
                                                             'last_updated': OLD_TIMES})
         self.total_entities += 1
         return entity
 
-    def _get_activity_from_comment(self, comment, entity):
+    def _parse_pikabu_time(self, time_str):
+        # 2022-04-10T06:31:03+03:00
+        # Python does not like colon in timezone, drop it
+        if time_str[-3:-2] == ':':
+            time_str = time_str[:-3] + time_str[-2:]
+        return datetime.strptime(
+            time_str, '%Y-%m-%dT%H:%M:%S%z')
+
+    def _get_activity_from_comment(self, comment, entity, parent):
         activity_url = comment.find_element(
             By.XPATH, ".//a[contains(@class, 'comment__tool') and contains(@data-role, 'link')]").get_attribute('href')
         creation_time_str = comment.find_element(
             By.XPATH, ".//time[contains(@class, 'comment__datetime')]").get_attribute('datetime')
-        # 2022-04-10T06:31:03+03:00
-        # Python does not like colon in timezone, drop it
-        if creation_time_str[-3:-2] == ':':
-            creation_time_str = creation_time_str[:-3] + creation_time_str[-2:]
-        creation_time = datetime.strptime(
-            creation_time_str, '%Y-%m-%dT%H:%M:%S%z')
+        creation_time = self._parse_pikabu_time(creation_time_str)
         try:
             tags = comment.find_elements(
                 By.XPATH, "./div[contains(@class, 'comment__content')]")
@@ -108,9 +99,12 @@ class PikabuParser(SiteParser):
             return None
 
         domain = urlparse(activity_url).netloc
-        # TODO: same, single commit
-        activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
-                                                                                   'creation_time': creation_time, 'domain': domain})
+        defaults = {'text': text, 'owner': entity,
+                    'creation_time': creation_time, 'domain': domain}
+        if parent is not None:
+            defaults['parent'] = parent
+        activity, _ = get_or_create(
+            session, Activity, url=activity_url, defaults=defaults)
         self.total_activities += 1
         return activity
 
@@ -152,15 +146,66 @@ class PikabuParser(SiteParser):
         self._scroll_for_more_posts()
         return super()._get_next_urls()
 
+    def _extract_post_activity(self):
+        main_story = self.driver.find_element(
+            By.XPATH, "//div[contains(@class, 'story__main')]")
+        author = main_story.find_element(
+            By.XPATH, ".//a[contains(@class, 'story__user-link')]")
+        entity_url = author.get_attribute('href')
+        domain = urlparse(entity_url).netloc
+        entity, _ = get_or_create(session, Entity,
+                                  url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                            'last_updated': OLD_TIMES})
+        self.total_entities += 1
+
+        link_element = main_story.find_element(
+            By.XPATH, ".//span[contains(@class, 'story__copy-link') and @data-url]")
+        activity_url = furl(unquote(link_element.get_attribute(
+            'data-url'))).remove(fragment=True, args=True).url
+        domain = urlparse(activity_url).netloc
+
+        date_element = main_story.find_element(
+            By.XPATH, ".//time[contains(@class, 'story__datetime')]")
+        creation_time = self._parse_pikabu_time(
+            date_element.get_attribute('datetime'))
+        title = main_story.find_element(
+            By.XPATH, ".//span[contains(@class, 'story__title-link')]").get_attribute('innerHTML').strip()
+        inner_text = main_story.find_element(
+            By.XPATH, ".//div[contains(@class, 'story__content-inner')]").get_attribute('innerHTML').strip()
+        text = title + "\n" + inner_text
+
+        activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
+                                                                                   'creation_time': creation_time, 'domain': domain})
+        self.total_activities += 1
+        return activity
+
+    def _extract_comments_recursive(self, level_element, parent_activity):
+        assert parent_activity is not None
+        elements = level_element.find_elements(
+            By.XPATH, "./div[@class='comment']")
+        for element in elements:
+            body = element.find_element(
+                By.XPATH, "./div[contains(@class, 'comment__body')]")
+            entity = self._get_entity_from_comment(body)
+            if entity is None:
+                logger.warning("Failed to extract entity from comment")
+                continue
+            activity = self._get_activity_from_comment(
+                body, entity, parent_activity)
+            try:
+                children_level = element.find_element(
+                    By.XPATH, "./div[contains(@class, 'comment__children')]")
+            except NoSuchElementException:
+                continue
+            self._extract_comments_recursive(children_level, activity)
+
     def parse(self):
-        self._get_post_author_entities()
         if not self._is_post_url():
             return
         self._expand_comments()
 
-        comments = self.driver.find_elements(By.CLASS_NAME, 'comment__body')
-        for comment in comments:
-            entity = self._get_entity_from_comment(comment)
+        activity = self._extract_post_activity()
 
-            if entity is not None:
-                _ = self._get_activity_from_comment(comment, entity)
+        root_level = self.driver.find_element(
+            By.CLASS_NAME, 'comments__container')
+        self._extract_comments_recursive(root_level, activity)

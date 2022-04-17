@@ -34,7 +34,8 @@ def do_analysis():
 
 
 def crawl():
-    urls = ['https://pikabu.ru/best']
+    urls = [
+        'https://pikabu.ru/best']
     crawler = Crawler()
     crawler.crawl(urls)
 
