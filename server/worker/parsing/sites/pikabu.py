@@ -206,6 +206,10 @@ class PikabuParser(SiteParser):
 
         activity = self._extract_post_activity()
 
-        root_level = self.driver.find_element(
-            By.CLASS_NAME, 'comments__container')
+        try:
+            root_level = self.driver.find_element(
+                By.CLASS_NAME, 'comments__container')
+        except NoSuchElementException:
+            # It's likely https://pikabu.ru/story/.../author page, but let's log to verify
+            logger.warning("Failed to find top level layer for comments")
         self._extract_comments_recursive(root_level, activity)
