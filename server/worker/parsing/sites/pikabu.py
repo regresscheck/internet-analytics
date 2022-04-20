@@ -149,8 +149,13 @@ class PikabuParser(SiteParser):
     def _extract_post_activity(self):
         main_story = self.driver.find_element(
             By.XPATH, "//div[contains(@class, 'story__main')]")
-        author = main_story.find_element(
-            By.XPATH, ".//a[contains(@class, 'story__user-link')]")
+        try:
+            author = main_story.find_element(
+                By.XPATH, ".//a[contains(@class, 'story__user-link')]")
+        except NoSuchElementException:
+            # Author is banned/deleted
+            # TODO: allow creating activities without entities to save full context
+            return None
         entity_url = author.get_attribute('href')
         domain = urlparse(entity_url).netloc
         entity, _ = get_or_create(session, Entity,
@@ -180,7 +185,6 @@ class PikabuParser(SiteParser):
         return activity
 
     def _extract_comments_recursive(self, level_element, parent_activity):
-        assert parent_activity is not None
         elements = level_element.find_elements(
             By.XPATH, "./div[@class='comment']")
         for element in elements:
