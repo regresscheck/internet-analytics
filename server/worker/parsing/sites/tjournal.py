@@ -28,12 +28,12 @@ class TJournalParser(SiteParser):
             return False
 
     def _expand_comments(self):
-        # Sometimes it takes time to load comments
-        element = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
-            (By.XPATH, "//div[contains(@class, 'comments__content_wrapper__button')]/div")))
-        if element.is_displayed():
-            ActionChains(self.driver).move_to_element(
-                element).click(element).perform()
+        self.driver.execute_script(
+            "const button = document.querySelector('.comments__content_wrapper__button > .ui-button'); if (button !== null) { button.click(); }")
+        self.driver.execute_script(
+            "async function run() { while (true) { const button = document.querySelector('.comment__load-more.comment__inline-action'); if (button === null) { break; } if (!button.classList.contains('comment__load-more-waiting')) { button.click(); } await new Promise(resolve => setTimeout(resolve, 300));}} run()")
+        _ = WebDriverWait(self.driver, 15).until_not(
+            EC.presence_of_element_located((By.CLASS_NAME, 'comment__load-more')))
 
     def _get_entity_from_comment(self, comment):
         try:
