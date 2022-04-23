@@ -21,7 +21,6 @@ class Crawler:
         options = Options()
         options.headless = True
         self.driver = webdriver.Firefox(options=options)
-        self.driver.implicitly_wait(2)
         self.driver.set_page_load_timeout(30)
 
     def _mark_as_done(self, url):
