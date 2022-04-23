@@ -42,7 +42,7 @@ class TJournalParser(SiteParser):
     def _get_entity_from_comment(self, comment):
         try:
             entity_url = comment.find_element(
-                By.XPATH, ".//a[contains(@class, 'comment__author')]").get_attribute('href')
+                By.CSS_SELECTOR, "a.comment__author").get_attribute('href')
         except NoSuchElementException:
             # Anonymous user
             return None
@@ -104,8 +104,11 @@ class TJournalParser(SiteParser):
             By.CSS_SELECTOR, 'div.content-header__item time.time').get_attribute('data-date')
         creation_time = datetime.fromtimestamp(int(creation_time_str))
 
-        title = main_story.find_element(
-            By.CSS_SELECTOR, 'h1.content-title').get_attribute('innerHTML').strip()
+        try:
+            title = main_story.find_element(
+                By.CSS_SELECTOR, 'h1.content-title').get_attribute('innerHTML').strip()
+        except NoSuchElementException:
+            title = ""
         inner_text = main_story.find_element(
             By.CSS_SELECTOR, 'div.content--full').get_attribute('innerHTML').strip()
         text = title + "\n" + inner_text

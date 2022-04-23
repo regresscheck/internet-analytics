@@ -49,7 +49,7 @@ class PikabuParser(SiteParser):
     def _get_entity_from_comment(self, comment):
         try:
             entity_url = comment.find_element(
-                By.XPATH, ".//a[contains(@class, 'user')]").get_attribute('href')
+                By.CSS_SELECTOR, "a.user").get_attribute('href')
         except NoSuchElementException as e:
             # User is banned/deleted
             return None
@@ -76,13 +76,13 @@ class PikabuParser(SiteParser):
 
     def _get_activity_from_comment(self, comment, entity, parent):
         activity_url = comment.find_element(
-            By.XPATH, ".//a[contains(@class, 'comment__tool') and contains(@data-role, 'link')]").get_attribute('href')
+            By.CSS_SELECTOR, 'a.comment__tool[data-role="link"]').get_attribute('href')
         creation_time_str = comment.find_element(
-            By.XPATH, ".//time[contains(@class, 'comment__datetime')]").get_attribute('datetime')
+            By.CSS_SELECTOR, "time.comment__datetime").get_attribute('datetime')
         creation_time = self._parse_pikabu_time(creation_time_str)
         try:
             tags = comment.find_elements(
-                By.XPATH, "./div[contains(@class, 'comment__content')]")
+                By.CSS_SELECTOR, "div.comment__content")
             # For some reason the site sometimes adds empty div. Skip it
             for tag in tags:
                 text = tag.get_attribute('innerHTML').strip()
@@ -148,10 +148,10 @@ class PikabuParser(SiteParser):
 
     def _extract_post_activity(self):
         main_story = self.driver.find_element(
-            By.XPATH, "//div[contains(@class, 'story__main')]")
+            By.CSS_SELECTOR, "div.story__main")
         try:
             author = main_story.find_element(
-                By.XPATH, ".//a[contains(@class, 'story__user-link')]")
+                By.CSS_SELECTOR, "a.story__user-link")
         except NoSuchElementException:
             # Author is banned/deleted
             # TODO: allow creating activities without entities to save full context
@@ -164,19 +164,19 @@ class PikabuParser(SiteParser):
         self.total_entities += 1
 
         link_element = main_story.find_element(
-            By.XPATH, ".//span[contains(@class, 'story__copy-link') and @data-url]")
+            By.CSS_SELECTOR, "span.story__copy-link[data-url]")
         activity_url = furl(unquote(link_element.get_attribute(
             'data-url'))).remove(fragment=True, args=True).url
         domain = urlparse(activity_url).netloc
 
         date_element = main_story.find_element(
-            By.XPATH, ".//time[contains(@class, 'story__datetime')]")
+            By.CSS_SELECTOR, "time.story__datetime")
         creation_time = self._parse_pikabu_time(
             date_element.get_attribute('datetime'))
         title = main_story.find_element(
-            By.XPATH, ".//span[contains(@class, 'story__title-link')]").get_attribute('innerHTML').strip()
+            By.CSS_SELECTOR, "span.story__title-link").get_attribute('innerHTML').strip()
         inner_text = main_story.find_element(
-            By.XPATH, ".//div[contains(@class, 'story__content-inner')]").get_attribute('innerHTML').strip()
+            By.CSS_SELECTOR, "div.story__content-inner").get_attribute('innerHTML').strip()
         text = title + "\n" + inner_text
 
         activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
@@ -186,10 +186,10 @@ class PikabuParser(SiteParser):
 
     def _extract_comments_recursive(self, level_element, parent_activity):
         elements = level_element.find_elements(
-            By.XPATH, "./div[@class='comment']")
+            By.CSS_SELECTOR, ":scope > div.comment")
         for element in elements:
             body = element.find_element(
-                By.XPATH, "./div[contains(@class, 'comment__body')]")
+                By.CSS_SELECTOR, ":scope > div.comment__body")
             entity = self._get_entity_from_comment(body)
             if entity is None:
                 logger.warning("Failed to extract entity from comment")
@@ -198,7 +198,7 @@ class PikabuParser(SiteParser):
                 body, entity, parent_activity)
             try:
                 children_level = element.find_element(
-                    By.XPATH, "./div[contains(@class, 'comment__children')]")
+                    By.CSS_SELECTOR, ":scope > div.comment__children")
             except NoSuchElementException:
                 continue
             self._extract_comments_recursive(children_level, activity)
