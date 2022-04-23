@@ -4,9 +4,11 @@ from common.models import Activity, Analysis, Entity
 from common.database_helpers import create_db, get_or_create, session
 from datetime import datetime
 from worker.logging_utils import setup_logging
-
+import logging
 
 setup_logging()
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_entity(entity):
@@ -40,6 +42,12 @@ def crawl():
 
 
 def main():
-    create_db()
-    crawl()
+    try:
+        create_db()
+        crawl()
+    except KeyboardInterrupt:
+        logger.info("Stopping worker")
+    except Exception as e:
+        logger.exception("Unhandled exception")
+        raise e
     # do_analysis()

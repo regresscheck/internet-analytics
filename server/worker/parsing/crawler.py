@@ -59,7 +59,12 @@ class Crawler:
     def crawl(self, starting_urls):
         for url in starting_urls:
             self.queue.put(url)
-        while self.queue.qsize() > 0:
-            self._process_one()
-            # TODO: wait time based on last request to given domain
-            time.sleep(2)
+        try:
+            while self.queue.qsize() > 0:
+                self._process_one()
+                # TODO: wait time based on last request to given domain
+                time.sleep(2)
+        except KeyboardInterrupt as e:
+            logger.info("Stopping driver")
+            self.driver.quit()
+            raise e
