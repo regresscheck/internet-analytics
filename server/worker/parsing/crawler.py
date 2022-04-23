@@ -53,6 +53,8 @@ class Crawler:
             if next_url not in self.current and next_url not in self.processed:
                 self.queue.put(next_url)
         self._mark_as_done(url)
+        # Also mark the resulting url, there could be redirects
+        self.processed.add(self.driver.current_url)
 
     def crawl(self, starting_urls):
         for url in starting_urls:
