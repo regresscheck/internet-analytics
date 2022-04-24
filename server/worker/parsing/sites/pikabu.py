@@ -216,4 +216,5 @@ class PikabuParser(SiteParser):
         except NoSuchElementException:
             # It's likely https://pikabu.ru/story/.../author page, but let's log to verify
             logger.warning("Failed to find top level layer for comments")
+            return
         self._extract_comments_recursive(root_level, activity)
