@@ -3,7 +3,7 @@ from queue import Queue
 import time
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from worker.parsing.site_parser_utils import NoSuitableParserException, get_suitable_parser
 
 
@@ -54,6 +54,11 @@ class Crawler:
                 self._cleanup_browser()
                 self._timeout_count = 0
             return
+        except WebDriverException:
+            # Easiest cause - unresolvable URL
+            logger.warning("Received WebDriverError", exc_info=True)
+            self._mark_as_done(url)
+
         try:
             parser = get_suitable_parser(self.driver)
         except NoSuitableParserException as e:
