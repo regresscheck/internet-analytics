@@ -58,7 +58,7 @@ class Crawler:
             # Easiest cause - unresolvable URL
             logger.warning("Received WebDriverError", exc_info=True)
             self._mark_as_done(url)
-
+            return
         try:
             parser = get_suitable_parser(self.driver)
         except NoSuitableParserException as e:
