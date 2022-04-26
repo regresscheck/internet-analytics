@@ -31,7 +31,11 @@ class SiteParser(abc.ABC):
         links = set()
         for element in self.driver.find_elements(By.TAG_NAME, 'a'):
             url = element.get_attribute('href')
-            f = furl(url)
+            try:
+                f = furl(url)
+            except ValueError:
+                # Not a valid URL
+                continue
             if f.scheme not in ['http', 'https'] or len(f.netloc) == 0:
                 continue
             links.add(self._strip_next_url(url))
