@@ -43,8 +43,11 @@ class PikabuParser(SiteParser):
         # TODO: verify it works on very deep trees
         self.driver.execute_script(
             "while (true) {const collapsed = document.querySelectorAll('.comment-toggle-children_collapse'); if (collapsed.length == 0) {break;} collapsed.forEach(element => element.click())}")
-        _ = WebDriverWait(self.driver, 15).until_not(
-            EC.presence_of_element_located((By.CLASS_NAME, 'comment__placeholder')))
+        try:
+            _ = WebDriverWait(self.driver, 30).until_not(
+                EC.presence_of_element_located((By.CLASS_NAME, 'comment__placeholder')))
+        except:
+            logger.warning("Failed to expand comments in time")
 
     def _get_entity_from_comment(self, comment):
         try:
