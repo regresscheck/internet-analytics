@@ -55,7 +55,8 @@ class Crawler:
                 self._timeout_count = 0
             return
         except WebDriverException:
-            # Easiest cause - unresolvable URL
+            # Easiest cause - unresolvable URL.
+            # TODO: figure out if there any other cases, make message more reasonable
             logger.warning("Received WebDriverError", exc_info=True)
             self._mark_as_done(url)
             return
@@ -65,10 +66,17 @@ class Crawler:
             logger.info(f'No suitable parser found for URL {url}')
             self._mark_as_done(url)
             return
-        parser.parse()
-        parser.log_results()
+        try:
+            parser.parse()
+            parser.log_results()
 
-        next_urls = parser._get_next_urls()
+            next_urls = parser._get_next_urls()
+        except WebDriverException:
+            logger.error("Unhandled WebDriveException", exc_info=True)
+            self._mark_as_done(url)
+            self.processed.add(self.driver.current_url)
+            self._timeout_count += 1
+            return
         for next_url in next_urls:
             if next_url not in self.current and next_url not in self.processed:
                 self.queue.put(next_url)
