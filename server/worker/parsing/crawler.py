@@ -3,7 +3,7 @@ from queue import Queue
 import time
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException, WebDriverException, UnexpectedAlertPresentException
 from worker.parsing.site_parser_utils import NoSuitableParserException, get_suitable_parser
 
 
@@ -38,6 +38,13 @@ class Crawler:
         self._create_driver()
         self.driver.delete_all_cookies()
 
+    def _finish_with_failure(self, url):
+        self._mark_as_done(url)
+        self._timeout_count += 1
+        if self._timeout_count >= 3:
+            self._cleanup_browser()
+            self._timeout_count = 0
+
     def _process_one(self):
         url = self.queue.get()
         if url in self.current or url in self.processed:
@@ -48,11 +55,7 @@ class Crawler:
             self.driver.get(url)
         except TimeoutException as e:
             logger.warning(f'Timed out fetching URL {url}')
-            self._mark_as_done(url)
-            self._timeout_count += 1
-            if self._timeout_count >= 3:
-                self._cleanup_browser()
-                self._timeout_count = 0
+            self._finish_with_failure(url)
             return
         except WebDriverException:
             # Easiest cause - unresolvable URL.
@@ -66,6 +69,11 @@ class Crawler:
             logger.info(f'No suitable parser found for URL {url}')
             self._mark_as_done(url)
             return
+        except UnexpectedAlertPresentException:
+            # This exception is only thrown on interaction with driver object, hence it can only happen here, and not before.
+            # The cause of it is JS `alert()`
+            logger.warning("Received alert on the page")
+            self._finish_with_failure(url)
         try:
             parser.parse()
             parser.log_results()
@@ -73,9 +81,7 @@ class Crawler:
             next_urls = parser._get_next_urls()
         except WebDriverException:
             logger.error("Unhandled WebDriveException", exc_info=True)
-            self._mark_as_done(url)
-            self.processed.add(self.driver.current_url)
-            self._timeout_count += 1
+            self._finish_with_failure(url)
             return
         for next_url in next_urls:
             if next_url not in self.current and next_url not in self.processed:
