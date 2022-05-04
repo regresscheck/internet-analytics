@@ -58,10 +58,10 @@ class Crawler:
             self._finish_with_failure(url)
             return
         except WebDriverException:
-            # Easiest cause - unresolvable URL.
-            # TODO: figure out if there any other cases, make message more reasonable
-            logger.warning("Received WebDriverError", exc_info=True)
-            self._mark_as_done(url)
+            # Easiest cause - unresolvable URL. Or some issues with Browser
+            # TODO: figure out if there any other cases
+            logger.error("Unhandled WebDriverError", exc_info=True)
+            self._finish_with_failure(url)
             return
         try:
             parser = get_suitable_parser(self.driver)
