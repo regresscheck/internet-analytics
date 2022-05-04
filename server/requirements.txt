@@ -1,0 +1,5 @@
+fastapi
+furl
+selenium
+SQLAlchemy
+uvicorn
