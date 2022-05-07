@@ -1,6 +1,5 @@
 __pycache__/
 .ipynb_checkpoints/
-Playground.ipynb
 sqlite.db
 sqlite.db-journal
 *.log
