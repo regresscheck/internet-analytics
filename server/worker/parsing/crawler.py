@@ -103,3 +103,4 @@ class Crawler:
             logger.info("Stopping driver")
             self.driver.quit()
             raise e
+        logger.info("Finished the queue")
