@@ -17,6 +17,7 @@ class Crawler:
         self.queue = Queue()
         self.current = set()
         self.processed = set()
+        self.current_url = None
         self._timeout_count = 0
         self.driver = None
         self._create_driver()
@@ -45,8 +46,9 @@ class Crawler:
             self._cleanup_browser()
             self._timeout_count = 0
 
-    def _process_one(self):
+    def _process_one_inner(self):
         url = self.queue.get()
+        self.current_url = url
         if url in self.current or url in self.processed:
             return
         self.current.add(url)
@@ -57,32 +59,16 @@ class Crawler:
             logger.warning(f'Timed out fetching URL {url}')
             self._finish_with_failure(url)
             return
-        except WebDriverException:
-            # Easiest cause - unresolvable URL. Or some issues with Browser
-            # TODO: figure out if there any other cases
-            logger.error("Unhandled WebDriverError", exc_info=True)
-            self._finish_with_failure(url)
-            return
         try:
             parser = get_suitable_parser(self.driver)
         except NoSuitableParserException as e:
             logger.info(f'No suitable parser found for URL {url}')
             self._mark_as_done(url)
             return
-        except UnexpectedAlertPresentException:
-            # This exception is only thrown on interaction with driver object, hence it can only happen here, and not before.
-            # The cause of it is JS `alert()`
-            logger.warning("Received alert on the page")
-            self._finish_with_failure(url)
-        try:
-            parser.parse()
-            parser.log_results()
+        parser.parse()
+        parser.log_results()
 
-            next_urls = parser._get_next_urls()
-        except WebDriverException:
-            logger.error("Unhandled WebDriveException", exc_info=True)
-            self._finish_with_failure(url)
-            return
+        next_urls = parser._get_next_urls()
         for next_url in next_urls:
             if next_url not in self.current and next_url not in self.processed:
                 self.queue.put(next_url)
@@ -90,6 +76,13 @@ class Crawler:
         # Also mark the resulting url, there could be redirects
         self.processed.add(self.driver.current_url)
         self._timeout_count = 0
+
+    def _process_one(self):
+        try:
+            self._process_one_inner()
+        except WebDriverException:
+            logger.error("Unhandled WebDriverError", exc_info=True)
+            self._finish_with_failure(self.current_url)
 
     def crawl(self, starting_urls):
         for url in starting_urls:
