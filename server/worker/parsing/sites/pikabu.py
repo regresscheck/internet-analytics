@@ -198,11 +198,15 @@ class PikabuParser(SiteParser):
         inner_text = main_story.find_element(
             By.CSS_SELECTOR, "div.story__content-inner").get_attribute('innerHTML').strip()
         text = title + "\n" + inner_text
-
-        likes_element, dislikes_element = main_story.find_elements(
-            By.CSS_SELECTOR, "span.page-story__rating-vote")
-        likes_count = likes_element.get_attribute('innerHTML')
-        dislikes_count = dislikes_element.get_attribute('innerHTML')
+        try:
+            likes_element, dislikes_element = main_story.find_elements(
+                By.CSS_SELECTOR, "span.page-story__rating-vote")
+            likes_count = likes_element.get_attribute('innerHTML')
+            dislikes_count = dislikes_element.get_attribute('innerHTML')
+        except ValueError:
+            # likes are hidden, post does not have enough votes
+            likes_count = 0
+            dislikes_count = 0
 
         extra_data = self._create_extra_data(likes_count, dislikes_count)
         defaults = {'text': text, 'owner': entity,
