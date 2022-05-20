@@ -5,7 +5,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from common.consts import OLD_TIMES
-from common.database_helpers import get_or_create, session
+from common.database_helpers import create_or_update, session
 from common.models.activity import Activity
 from common.models.entity import Entity, EntityType
 from urllib.parse import urlparse
@@ -48,9 +48,9 @@ class TJournalParser(SiteParser):
             return None
         domain = urlparse(entity_url).netloc
         # TODO: insert all entities with a single commit
-        entity, _ = get_or_create(session, Entity,
-                                  url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                                            'last_updated': OLD_TIMES})
+        entity, _ = create_or_update(session, Entity,
+                                     url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                               'last_updated': OLD_TIMES})
         self.total_entities += 1
         return entity
 
@@ -72,7 +72,7 @@ class TJournalParser(SiteParser):
                     'creation_time': creation_time, 'domain': domain}
         if parent is not None:
             defaults['parent'] = parent
-        activity, _ = get_or_create(
+        activity, _ = create_or_update(
             session, Activity, url=activity_url, defaults=defaults)
         self.total_activities += 1
         return activity
@@ -90,9 +90,9 @@ class TJournalParser(SiteParser):
 
         entity_url = author.get_attribute('href')
         domain = urlparse(entity_url).netloc
-        entity, _ = get_or_create(session, Entity,
-                                  url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                                            'last_updated': OLD_TIMES})
+        entity, _ = create_or_update(session, Entity,
+                                     url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                               'last_updated': OLD_TIMES})
         self.total_entities += 1
 
         link_element = main_story.find_element(
@@ -113,8 +113,8 @@ class TJournalParser(SiteParser):
             By.CSS_SELECTOR, 'div.content--full').get_attribute('innerHTML').strip()
         text = title + "\n" + inner_text
 
-        activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
-                                                                                   'creation_time': creation_time, 'domain': domain})
+        activity, _ = create_or_update(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
+                                                                                      'creation_time': creation_time, 'domain': domain})
         self.total_activities += 1
         return activity
 

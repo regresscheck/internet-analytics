@@ -1,4 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Index
+from sqlalchemy.types import JSON
 from sqlalchemy.orm import relationship, backref
 from common.models.base import Base
 
@@ -15,6 +16,7 @@ class Activity(Base):
     domain = Column(String, nullable=False)
     text = Column(String)
     creation_time = Column(DateTime(timezone=True))
+    site_extra_data = Column(JSON)
 
     __table_args__ = (
         Index('owner_creation_time_desc_idx', owner_id, creation_time.desc()),

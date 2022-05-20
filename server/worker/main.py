@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from worker.parsing.crawler import Crawler
 from common.models import Activity, Analysis, Entity
-from common.database_helpers import create_db, get_or_create, session
+from common.database_helpers import create_db, create_or_update, session
 from datetime import datetime
 from worker.logging_utils import setup_logging
 import logging
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def analyze_entity(entity):
-    analysis, _ = get_or_create(session, Analysis, owner=entity)
+    analysis, _ = create_or_update(session, Analysis, owner=entity)
 
     activities = session.query(Activity).filter(
         Activity.owner == entity).all()
@@ -36,7 +36,7 @@ def do_analysis():
 
 
 def crawl():
-    urls = ['https://pikabu.ru/']
+    urls = ['https://pikabu.ru/story/ukusil_tak_ukusil_9122508']
     crawler = Crawler()
     crawler.crawl(urls)
 

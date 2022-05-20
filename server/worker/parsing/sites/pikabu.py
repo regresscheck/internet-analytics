@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from common.consts import OLD_TIMES
-from common.database_helpers import get_or_create, session
+from common.database_helpers import create_or_update, session
 from common.models.activity import Activity
 from common.models.entity import Entity, EntityType
 from urllib.parse import urlparse, unquote
@@ -25,6 +25,12 @@ class PikabuParser(SiteParser):
     @staticmethod
     def get_supported_domain():
         return SUPPORTED_DOMAIN
+
+    def _create_extra_data(self, likes_count, dislikes_count):
+        return {
+            'likes': int(likes_count),
+            'dislikes': int(dislikes_count),
+        }
 
     def _is_post_url(self):
         if not self.driver.current_url.startswith('https://pikabu.ru/story/'):
@@ -52,7 +58,7 @@ class PikabuParser(SiteParser):
     def _get_entity_from_comment(self, comment):
         try:
             entity_url = comment.find_element(
-                By.CSS_SELECTOR, "a.user").get_attribute('href')
+                By.CSS_SELECTOR, ":scope > div.comment__body a.user").get_attribute('href')
         except NoSuchElementException as e:
             # User is banned/deleted
             return None
@@ -63,9 +69,9 @@ class PikabuParser(SiteParser):
                 f"Stale element found while parsing URL {self.driver.current_url}")
             return None
         domain = urlparse(entity_url).netloc
-        entity, _ = get_or_create(session, Entity,
-                                  url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                                            'last_updated': OLD_TIMES})
+        entity, _ = create_or_update(session, Entity,
+                                     url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                               'last_updated': OLD_TIMES})
         self.total_entities += 1
         return entity
 
@@ -80,6 +86,7 @@ class PikabuParser(SiteParser):
     def _get_activity_from_comment(self, comment, entity, parent):
         activity_url = comment.find_element(
             By.CSS_SELECTOR, 'a.comment__tool[data-role="link"]').get_attribute('href')
+        domain = urlparse(activity_url).netloc
         creation_time_str = comment.find_element(
             By.CSS_SELECTOR, "time.comment__datetime").get_attribute('datetime')
         creation_time = self._parse_pikabu_time(creation_time_str)
@@ -101,12 +108,22 @@ class PikabuParser(SiteParser):
                 f"Empty comment text was parsed when processing URL {self.driver.current_url}")
             return None
 
-        domain = urlparse(activity_url).netloc
+        meta = dict(item.split('=')
+                    for item in comment.get_attribute('data-meta').split(';'))
+        try:
+            likes_count, dislikes_count = meta['av'].split(',')
+        except KeyError:
+            # Fresh comments have likes hidden
+            likes_count = 0
+            dislikes_count = 0
+
+        extra_data = self._create_extra_data(likes_count, dislikes_count)
         defaults = {'text': text, 'owner': entity,
-                    'creation_time': creation_time, 'domain': domain}
+                    'creation_time': creation_time, 'domain': domain,
+                    'site_extra_data': extra_data}
         if parent is not None:
             defaults['parent'] = parent
-        activity, _ = get_or_create(
+        activity, _ = create_or_update(
             session, Activity, url=activity_url, defaults=defaults)
         self.total_activities += 1
         return activity
@@ -151,7 +168,7 @@ class PikabuParser(SiteParser):
 
     def _extract_post_activity(self):
         main_story = self.driver.find_element(
-            By.CSS_SELECTOR, "div.story__main")
+            By.CSS_SELECTOR, "div.main")
         try:
             author = main_story.find_element(
                 By.CSS_SELECTOR, "a.story__user-link")
@@ -161,9 +178,9 @@ class PikabuParser(SiteParser):
             return None
         entity_url = author.get_attribute('href')
         domain = urlparse(entity_url).netloc
-        entity, _ = get_or_create(session, Entity,
-                                  url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
-                                                            'last_updated': OLD_TIMES})
+        entity, _ = create_or_update(session, Entity,
+                                     url=entity_url, defaults={'entity_type': EntityType.USER, 'domain': domain,
+                                                               'last_updated': OLD_TIMES})
         self.total_entities += 1
 
         link_element = main_story.find_element(
@@ -182,8 +199,17 @@ class PikabuParser(SiteParser):
             By.CSS_SELECTOR, "div.story__content-inner").get_attribute('innerHTML').strip()
         text = title + "\n" + inner_text
 
-        activity, _ = get_or_create(session, Activity, url=activity_url, defaults={'text': text, 'owner': entity,
-                                                                                   'creation_time': creation_time, 'domain': domain})
+        likes_element, dislikes_element = main_story.find_elements(
+            By.CSS_SELECTOR, "span.page-story__rating-vote")
+        likes_count = likes_element.get_attribute('innerHTML')
+        dislikes_count = dislikes_element.get_attribute('innerHTML')
+
+        extra_data = self._create_extra_data(likes_count, dislikes_count)
+        defaults = {'text': text, 'owner': entity,
+                    'creation_time': creation_time, 'domain': domain,
+                    'site_extra_data': extra_data}
+        activity, _ = create_or_update(
+            session, Activity, url=activity_url, defaults=defaults)
         self.total_activities += 1
         return activity
 
@@ -191,14 +217,12 @@ class PikabuParser(SiteParser):
         elements = level_element.find_elements(
             By.CSS_SELECTOR, ":scope > div.comment")
         for element in elements:
-            body = element.find_element(
-                By.CSS_SELECTOR, ":scope > div.comment__body")
-            entity = self._get_entity_from_comment(body)
+            entity = self._get_entity_from_comment(element)
             if entity is None:
                 logger.warning("Failed to extract entity from comment")
                 continue
             activity = self._get_activity_from_comment(
-                body, entity, parent_activity)
+                element, entity, parent_activity)
             try:
                 children_level = element.find_element(
                     By.CSS_SELECTOR, ":scope > div.comment__children")
