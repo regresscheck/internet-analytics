@@ -107,8 +107,7 @@ class PikabuParser(SiteParser):
             logger.warning(
                 f"Empty comment text was parsed when processing URL {self.driver.current_url}")
             return None
-
-        meta = dict(item.split('=')
+        meta = dict(item.split('=') if '=' in item else [item, '']
                     for item in comment.get_attribute('data-meta').split(';'))
         try:
             likes_count, dislikes_count = meta['av'].split(',')
