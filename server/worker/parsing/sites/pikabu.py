@@ -44,11 +44,11 @@ class PikabuParser(SiteParser):
         self.driver.execute_script(
             "const button = document.querySelector('.comments__more-button'); if (button !== null) { button.click(); }")
         self.driver.execute_script(
-            "while (true) { const button = document.querySelector('.comment__more'); if (button === null) { break; } button.click(); }")
+            "for (var i = 0; i < 5000; i++) { const button = document.querySelector('.comment__more'); if (button === null) { break; } button.click(); }")
         # Expand each comment subtree, may take multiple iterations
         # TODO: verify it works on very deep trees
         self.driver.execute_script(
-            "while (true) {const collapsed = document.querySelectorAll('.comment-toggle-children_collapse'); if (collapsed.length == 0) {break;} collapsed.forEach(element => element.click())}")
+            "for (var i = 0; i < 5000; i++)  {const collapsed = document.querySelectorAll('.comment-toggle-children_collapse'); if (collapsed.length == 0) {break;} collapsed.forEach(element => element.click())}")
         try:
             _ = WebDriverWait(self.driver, 30).until_not(
                 EC.presence_of_element_located((By.CLASS_NAME, 'comment__placeholder')))
